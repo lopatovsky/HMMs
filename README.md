@@ -1,7 +1,7 @@
 # CT-HMM
-Continuous-time Hidden Markov Model
+(Continuous-time Hidden Markov Model)
 
-Implementation of EM algorithms for CTHMM:
+Implementation of EM algorithms for CT-HMM:
 
 Algorithm sources:
 
