@@ -1,0 +1,12 @@
+env/
+.ipynb_checkpoints/
+*.pyc
+__pycache__/
+.cache/
+dist/
+*.egg-info
+*.so
+*.o
+*.html
+*.prof
+*.c
