@@ -3,8 +3,11 @@ import random
 cimport numpy
 cimport cython
 
+#cython: wraparound=False
+#cython: boundscheck=False
+#cython: nonecheck=False
 
-ctypedef numpy.float64_t DTYPE_t
+ctypedef numpy.float64_t float_t
 
 cdef class HMM:
 
@@ -44,23 +47,27 @@ cdef class HMM:
     #    """From given emission sequence calculate the likelihood estimation given model parameters"""
     #    return numpy.sum( self.backward( states,emission)[0,:] )
 
-    #TODO log likelihood.
-    cpdef forward(self, emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[float_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
            Return logaritmus of probabilities.
         """
+        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num, max_p, log_sum
+
         size = emissions.shape[0]
         states_num = self._a.shape[0]
-        alpha = numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
         print(emissions[0])
-        alpha[0,:] =  self._logpi + self._logb[:, int(emissions[0]) ]
+        alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
             for s in range(states_num):
                 max_p = numpy.amax(  alpha[i-1,:] )                                                      #log-sum-exp trick
-                log_sum = numpy.log ( numpy.sum( numpy.exp( alpha[i-1,:] + self._loga[:,s] - max_p ) ) ) #
+                log_sum = numpy.log ( numpy.sum( numpy.exp( alpha[i-1,:] + loga[:,s] - max_p ) ) ) #
                 alpha[i,s] = max_p + log_sum
 
-            alpha[i,:] = alpha[i,:] + self._logb[:, int(emissions[i]) ]
+            alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
 
         return alpha
 
@@ -87,11 +94,11 @@ def main():
     B = numpy.array([[0.9,0.1],[0.2,0.8]])
     pi = numpy.array( [0.8,0.2] )
     hmm = HMM(A,B,pi)
-    (s,e) = hmm.generate(3)
+    (s,e) = hmm.generate(100000)
     print(s)
     print(e)
 
-    print( numpy.exp(hmm.forward(e) ) )
+    print( (hmm.forward(e) ) )
 
     #hmm2 = HMM.from_parameters(A,B,pi)
     #hmm2 = HMM.from_file("x.hmm")
