@@ -8,16 +8,22 @@ ctypedef numpy.float64_t DTYPE_t
 
 cdef class HMM:
 
-    cdef numpy.ndarray _a
-    cdef numpy.ndarray _b
-    cdef numpy.ndarray _pi
+    """Parameters _loga, _logb, _logpi are log likelihoods of _a, _b and _pi used to avoid underflow."""
+    cdef numpy.ndarray _a #todo used only in generate, maybe can be erased.
+    cdef numpy.ndarray _b #
+    cdef numpy.ndarray _pi #
+    cdef numpy.ndarray _loga
+    cdef numpy.ndarray _logb
+    cdef numpy.ndarray _logpi
 
     def __init__(self, A, B, Pi):
         """Initialize the HMM by small random values."""
         self._a = A
         self._b = B
         self._pi = Pi
-        print("hello init")
+        self._loga = numpy.log(A)
+        self._logb = numpy.log(B)
+        self._logpi = numpy.log(Pi)
 
     def generate(self, size ):
         """Randomly generate a sequence of states and emissions from model parameters."""
@@ -40,19 +46,21 @@ cdef class HMM:
 
     #TODO log likelihood.
     cpdef forward(self, emissions):
-        """From emission sequence calculate the forward variables (alpha) given mode; parameters"""
+        """From emission sequence calculate the forward variables (alpha) given model parameters.
+           Return logaritmus of probabilities.
+        """
         size = emissions.shape[0]
         states_num = self._a.shape[0]
         alpha = numpy.zeros( (size, states_num ))
         print(emissions[0])
-        alpha[0,:] = numpy.multiply( self._pi, self._b[:, int(emissions[0]) ] )
+        alpha[0,:] =  self._logpi + self._logb[:, int(emissions[0]) ]
         for i in range(1,size):
             for s in range(states_num):
-                alpha[i,s] = numpy.dot( alpha[i-1,:], self._a[:,s] )
-                #for r in range(states_num):
-                #    alpha[i,s] += alpha[i-1,r] * self._a[r,s]
+                max_p = numpy.amax(  alpha[i-1,:] )                                                      #log-sum-exp trick
+                log_sum = numpy.log ( numpy.sum( numpy.exp( alpha[i-1,:] + self._loga[:,s] - max_p ) ) ) #
+                alpha[i,s] = max_p + log_sum
 
-            alpha[i,:] = numpy.multiply( alpha[i,:], self._b[:, int(emissions[i]) ] )
+            alpha[i,:] = alpha[i,:] + self._logb[:, int(emissions[i]) ]
 
         return alpha
 
@@ -79,11 +87,11 @@ def main():
     B = numpy.array([[0.9,0.1],[0.2,0.8]])
     pi = numpy.array( [0.8,0.2] )
     hmm = HMM(A,B,pi)
-    (s,e) = hmm.generate(100000)
+    (s,e) = hmm.generate(3)
     print(s)
     print(e)
 
-    print( hmm.forward(e) )
+    print( numpy.exp(hmm.forward(e) ) )
 
     #hmm2 = HMM.from_parameters(A,B,pi)
     #hmm2 = HMM.from_file("x.hmm")
