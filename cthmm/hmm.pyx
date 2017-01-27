@@ -66,7 +66,7 @@ cdef class HMM:
         for i in range(1,size):
             for s in range(states_num):
 
-                max_p = numpy.amax(  alpha[i-1,:] )                                                      #log-sum-exp trick
+                max_p = numpy.amax(  alpha[i-1,:]+loga[:,s] )    #todo separate array                                                  #log-sum-exp trick
                 log_sum = numpy.log ( numpy.sum( numpy.exp( alpha[i-1,:] + loga[:,s] - max_p ) ) ) #
                 alpha[i,s] = max_p + log_sum
 
@@ -82,7 +82,8 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num, max_p, log_sum
+        cdef int i, s, size, states_num
+        cdef float_t max_p, log_sum
 
         size = emissions.shape[0]
         states_num = self._a.shape[0]
@@ -91,11 +92,10 @@ cdef class HMM:
         beta[-1,:] = 0  #log(1) = 0
         for i in range(size-2, -1,-1):
             for s in range(states_num):
-                max_p = numpy.amax(  beta[i+1,:] )                                                      #log-sum-exp trick
-                log_sum = numpy.log ( numpy.sum( numpy.exp( beta[i+1,:] + loga[s,:] - max_p ) ) ) #
-                beta[i,s] = max_p + log_sum
 
-            beta[i,:] = beta[i,:] + logb[:, int(emissions[i+1]) ]
+                max_p = numpy.amax(  beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] ) #TODO separate array #log-sum-exp trick
+                log_sum = numpy.log ( numpy.sum( numpy.exp( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] - max_p ) ) ) #
+                beta[i,s] = max_p + log_sum
 
         return beta
 
