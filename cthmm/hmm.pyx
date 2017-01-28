@@ -151,8 +151,16 @@ cdef class HMM:
 
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
         """Given forward and backward variables, count the probability for any state in any time"""
-        pass
+        cdef numpy.ndarray[float_t, ndim=2] gamma #= numpy.empty( (alpha.shape[0],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef float_t max_p, log_sum
 
+        gamma = alpha + beta
+        for i in range(gamma.shape[0]):
+            max_p = numpy.amax( gamma[i] )
+            log_sum = numpy.log( numpy.sum( numpy.exp( gamma[i] - max_p ) ) )
+            gamma[i] -= log_sum
+
+        return gamma
 
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
         """Estimate parameters by Baum-Welch algorithm.
