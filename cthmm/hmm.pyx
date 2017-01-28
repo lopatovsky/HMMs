@@ -1,5 +1,6 @@
 import numpy
 import random
+import time  #performance meassure
 cimport numpy
 cimport cython
 
@@ -59,7 +60,6 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
         cdef int i, s, size, states_num,
-        cdef float_t max_p, log_sum
 
         size = emissions.shape[0]
         states_num = self._a.shape[0]
@@ -69,11 +69,9 @@ cdef class HMM:
         for i in range(1,size):
             for s in range(states_num):
 
-                max_p = numpy.amax(  alpha[i-1,:]+loga[:,s] )    #todo separate array                                                  #log-sum-exp trick
-                log_sum = numpy.log ( numpy.sum( numpy.exp( alpha[i-1,:] + loga[:,s] - max_p ) ) ) #
-                alpha[i,s] = max_p + log_sum
+                alpha[i,s] = self.log_sum( alpha[i-1,:]+loga[:,s] )
 
-            print(  numpy.exp(alpha[i,:]) )
+            #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
 
         return alpha
@@ -86,7 +84,6 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
         cdef int i, s, size, states_num
-        cdef float_t max_p, log_sum
 
         size = emissions.shape[0]
         states_num = self._a.shape[0]
@@ -95,10 +92,7 @@ cdef class HMM:
         beta[-1,:] = 0  #log(1) = 0
         for i in range(size-2, -1,-1):
             for s in range(states_num):
-
-                max_p = numpy.amax(  beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] ) #TODO separate array #log-sum-exp trick
-                log_sum = numpy.log ( numpy.sum( numpy.exp( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] - max_p ) ) ) #
-                beta[i,s] = max_p + log_sum
+                beta[i,s] = self.log_sum( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] )
 
         return beta
 
@@ -149,6 +143,16 @@ cdef class HMM:
 
         return ( max_p, path )
 
+    cdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
+        """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""
+        cdef float_t max_p              # faster for:  max_p = numpy.amax( vec )
+        cdef int i                      #
+        max_p = vec[0]                  #
+        for i in range(vec.shape[0]):   #
+            if max_p < vec[i] : max_p = vec[i] #
+        return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
+
+
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
         """Given forward and backward variables, count the probability for any state in any time"""
         cdef numpy.ndarray[float_t, ndim=2] gamma #= numpy.empty( (alpha.shape[0],alpha.shape[1]) , dtype=numpy.float64 )
@@ -156,9 +160,7 @@ cdef class HMM:
 
         gamma = alpha + beta
         for i in range(gamma.shape[0]):
-            max_p = numpy.amax( gamma[i] )
-            log_sum = numpy.log( numpy.sum( numpy.exp( gamma[i] - max_p ) ) )
-            gamma[i] -= log_sum
+            gamma[i] -= self.log_sum(gamma[i])
 
         return gamma
 
@@ -169,9 +171,17 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma
 
         for row in data:
+
+            start_time = time.time()
             alpha = self.forward ( row )
+            #if( numpy.all(alpha == alpha2) ): print ("ok")
             beta =  self.backward( row )
+
+            print("--fb- %s seconds ---" % (time.time() - start_time))
+
+            start_time = time.time()
             gamma = self.single_state_prob( alpha, beta )
+            print("--- %s seconds ---" % (time.time() - start_time))
 
         pass
 
@@ -226,7 +236,7 @@ def bw_test():
 
 
     num = 3
-    data_len = 20
+    data_len = 2000
     s = numpy.empty( (num, data_len), dtype=int )
     e = numpy.empty( (num, data_len), dtype=int )
 
@@ -234,7 +244,7 @@ def bw_test():
         s[i], e[i] = hmm.generate( data_len )
 
 
-    hmmr = HMM( *get_random_parameters(3,5) )
+    hmmr = HMM( *get_random_parameters(10,10) )
     hmmr.baum_welch( e )
 
 
