@@ -89,7 +89,7 @@ cdef class HMM:
         states_num = self._a.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] beta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
-        beta[-1,:] = 0 #log(1) = 0
+        beta[-1,:] = 0  #log(1) = 0
         for i in range(size-2, -1,-1):
             for s in range(states_num):
                 beta[i,s] = self.log_sum( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] )
@@ -187,6 +187,8 @@ cdef class HMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
+
+    #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
@@ -196,82 +198,86 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=3] ksi
 
 
-        for row in data:
+        for i in range(100):
 
-            print( "row" )
-            print( row )
+            print("iter ", i)
 
-            alpha = self.forward ( row )
-            beta =  self.backward( row )
+            for row in data:
 
-            print( "numpy.exp( alpha )"  )
-            print( numpy.exp( alpha )  )
-            print( "numpy.exp( beta )"  )
-            print( numpy.exp( beta )  )
+                #print( "row" )
+                #print( row )
+
+                alpha = self.forward ( row )
+                beta =  self.backward( row )
+
+                #print( "numpy.exp( alpha )"  )
+                #print( numpy.exp( alpha )  )
+                #rint( "numpy.exp( beta )"  )
+                #print( numpy.exp( beta )  )
 
 
-            gamma = self.single_state_prob( alpha, beta )
-            ksi = self.double_state_prob( alpha, beta, row )
+                gamma = self.single_state_prob( alpha, beta )
+                ksi = self.double_state_prob( alpha, beta, row )
 
 
 
-            print( "numpy.exp( gamma )"  )
-            print( numpy.exp( gamma )  )
-            print( "numpy.exp( ksi )"  )
-            print( numpy.exp( ksi )  )
+                print( "numpy.exp( gamma )"  )
+                print( numpy.exp( gamma )  )
+                #print( "numpy.exp( ksi )"  )
+                #print( numpy.exp( ksi )  )
 
-            start_time = time.time()
+                start_time = time.time()
 
-            gamma_sum = numpy.empty( gamma.shape[1] , dtype=numpy.float64 )
-            ksi_sum = numpy.empty( ( ksi.shape[1], ksi.shape[2] ) , dtype=numpy.float64 )
-            obs_sum = numpy.zeros( ( self._logb.shape[0], self._logb.shape[1] ) , dtype=numpy.float64 )
+                gamma_sum = numpy.empty( gamma.shape[1] , dtype=numpy.float64 )
+                ksi_sum = numpy.empty( ( ksi.shape[1], ksi.shape[2] ) , dtype=numpy.float64 )
+                obs_sum = numpy.full( ( self._logb.shape[0], self._logb.shape[1] ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
 
-            self._logpi = gamma[1,:]
+                self._logpi = gamma[0,:]
 
-            #expected number of transition from i to j
-            for i in range( ksi.shape[1] ):
-                for j in range( ksi.shape[2] ):
-                    ksi_sum[i,j] = self.log_sum( ksi[:,i,j] )
+                print( "pi ->"  )
+                print( numpy.exp( self._logpi )  )
 
-            #expected number of transition from state i
-            for i in range( gamma.shape[1] ):
-                gamma_sum[i] = self.log_sum( gamma[:-1,i] )
+                #expected number of transition from i to j
+                for i in range( ksi.shape[1] ):
+                    for j in range( ksi.shape[2] ):
+                        ksi_sum[i,j] = self.log_sum( ksi[:,i,j] )
 
-            #transition matrix estimation
-            self._loga = (ksi_sum.T - gamma_sum).T
+                #expected number of transition from state i
+                for i in range( gamma.shape[1] ):
+                    gamma_sum[i] = self.log_sum( gamma[:-1,i] )
 
-            print( "numpy.exp( ksi_sum )"  )
-            print( numpy.exp( ksi_sum )  )
-            print( "numpy.exp( gamma_sum )"  )
-            print( numpy.exp( gamma_sum )  )
-            print( "numpy.exp( self._loga )"  )
-            print( numpy.exp( self._loga )  )
+                #transition matrix estimation
+                self._loga = (ksi_sum.T - gamma_sum).T
 
-            #expected number of visiting state i and observing symbol v
-            for t in range( row.shape[0] ):
-                for i in range( obs_sum.shape[0] ):
-                    if obs_sum[i,row[t]] == 0:
-                        obs_sum[i,row[t]] = gamma[t,i]
-                    else:
+                #print( "numpy.exp( ksi_sum )"  )
+                #print( numpy.exp( ksi_sum )  )
+                #print( "numpy.exp( gamma_sum )"  )
+                #print( numpy.exp( gamma_sum )  )
+                #print( "a ->"  )
+                #print( numpy.exp( self._loga )  )
+
+                #expected number of visiting state i and observing symbol v
+                for t in range( row.shape[0] ):
+                    for i in range( obs_sum.shape[0] ):
                         obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
 
 
-            #expected number of visiting state i
-            for i in range( gamma.shape[1] ):  #full length sum
-                gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
+                #expected number of visiting state i
+                for i in range( gamma.shape[1] ):  #full length sum
+                    gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
 
 
-            self._logb = (obs_sum.T - gamma_sum).T
+                self._logb = (obs_sum.T - gamma_sum).T
 
-            print( "numpy.exp( obs_sum )"  )
-            print( numpy.exp( obs_sum )  )
-            print( "numpy.exp( gamma_sum )"  )
-            print( numpy.exp( gamma_sum )  )
-            print( "numpy.exp( self._logb )"  )
-            print( numpy.exp( self._logb )  )
+                #print( "numpy.exp( obs_sum )"  )
+                #print( numpy.exp( obs_sum )  )
+                #print( "numpy.exp( gamma_sum )"  )
+                #print( numpy.exp( gamma_sum )  )
+                print( "b -> "  )
+                print( numpy.exp( self._logb )  )
 
 
-            print("--- %s seconds ---" % (time.time() - start_time))
+                #print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
@@ -326,6 +332,8 @@ def bw_test():
 
     data = numpy.array([[0,1,1]]);
     hmm.baum_welch( data )
+
+    print( hmm.viterbi( data[0] ) )
 
 
 
