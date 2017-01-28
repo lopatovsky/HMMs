@@ -99,9 +99,52 @@ cdef class HMM:
 
         return beta
 
-    cpdef viterbi(self, emissions):
-        """From the emission sequence calculate most probable corresponding state sequence given parameters"""
+    cpdef viterbi(self, numpy.ndarray[int_t, ndim=1] emissions):
+        """From given emission sequence and parameters calculate the most likely state sequence"""
 
+        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num,
+        cdef float_t max_p
+
+        size = emissions.shape[0]
+        states_num = self._a.shape[0]
+        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.full( (size,states_num), 0, dtype=numpy.int ) #numpy.zeros( (size, states_num ))
+
+        delta[0,:] = logpi + logb[:, int(emissions[0]) ]
+        psi[0,:] = 0
+        for i in range(1,size):
+            for s in range(states_num):
+
+                delta[i,s] = delta[i-1,0] + loga[0,s]
+                psi[i,s] = 0
+
+                for r in range(1,states_num):
+                    if delta[i,s] < delta[i-1,r] + loga[r,s]:
+                        delta[i,s] = delta[i-1,r] + loga[r,s]
+                        psi[i,s] = r
+
+                delta[i,s] += logb[s,emissions[i]]
+        #print(numpy.exp(delta))
+        #print(psi)
+
+        max_p = delta[-1,0]
+        p = 0
+
+        for s in range(1,states_num):
+            if max_p < delta[-1,s]:
+                max_p = delta[-1,s]
+                p = s
+
+        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=numpy.int )
+
+        for i in range(size-1,-1,-1):
+            path[i] = p
+            p = psi[i,p]
+
+        return ( max_p, path )
 
 
     def from_file( self,file_path ):
@@ -130,6 +173,17 @@ def main():
     print( numpy.exp(hmm.forward(e) ) )
     print( numpy.exp(hmm.backward(e) ) )
     print( (hmm.emission_estimate(e) ) )
+
+    print("Viterbi: ")
+
+    ob = numpy.array([0,0,0,1,1,0,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,1,1,1])
+    t1 = numpy.array([0,1,0,1,1])
+
+    p, path = hmm.viterbi( ob )
+    print( numpy.exp(p) )
+    print(ob)
+    print( path )
+
 
     #hmm2 = HMM.from_parameters(A,B,pi)
     #hmm2 = HMM.from_file("x.hmm")
