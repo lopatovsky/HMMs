@@ -21,7 +21,7 @@ cdef class HMM:
     cdef numpy.ndarray _logpi
 
     def __init__(self, A, B, Pi):
-        """Initialize the HMM by small random values."""
+        """Initialize the HMM by given parameters."""
         self._a = A
         self._b = B
         self._pi = Pi
@@ -29,16 +29,19 @@ cdef class HMM:
         self._logb = numpy.log(B)
         self._logpi = numpy.log(Pi)
 
+    def check_parameters(self):
+        pass #TODO
+
     def generate(self, size ):
         """Randomly generate a sequence of states and emissions from model parameters."""
-        states = numpy.zeros(size)
-        emissions = numpy.zeros(size)
+        states = numpy.empty(size,dtype=int)
+        emissions = numpy.empty(size,dtype=int)
         current_state = numpy.random.choice( self._pi.shape[0], 1, p= self._pi)
         for i in range(size):
             states[i] = current_state
             emissions[i] =  numpy.random.choice( self._b.shape[1],1, p = self._b[ current_state,:].flatten() )
             current_state = numpy.random.choice( self._a.shape[1],1, p = self._a[ current_state,:].flatten() )
-        return (states, emissions )
+        return ( states, emissions )
 
     #cpdef estimate(self, states, emissions):
     #    """From given state and emission sequence calculate their likelihood estimation given model parameters"""
@@ -146,6 +149,25 @@ cdef class HMM:
 
         return ( max_p, path )
 
+    cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
+        """Given forward and backward variables, count the probability for any state in any time"""
+        pass
+
+
+    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
+        """Estimate parameters by Baum-Welch algorithm.
+           Input array data is the numpy array of observation sequences.
+        """
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma
+
+        for row in data:
+            alpha = self.forward ( row )
+            beta =  self.backward( row )
+            gamma = self.single_state_prob( alpha, beta )
+
+        pass
+
+
 
     def from_file( self,file_path ):
         """Initialize the HMM by the file from the file_path storing the parameters A,B,Pi""" ##TODO define the file format.
@@ -157,6 +179,56 @@ cdef class HMM:
     def meow(self):
         """Make the HMM to meow"""
         print('meow!')
+
+
+
+def get_random_vector( s ):
+    """Generate random vector of size (s), with all values summing to one"""
+    vec = numpy.random.random(s)
+    return vec / numpy.sum(vec)
+
+
+def get_random_parameters( s, o ):
+    """Generate random parameters A,B and Pi, for number of hidden states (s) and output variables (o)"""
+
+    a = numpy.empty( [s,s] )
+    b = numpy.empty( [s,o] )
+    pi = numpy.empty( s )
+
+    for i in range( a.shape[0] ):
+        a[i,:] = get_random_vector(s)
+    for i in range( b.shape[0]):
+        b[i,:] = get_random_vector(o)
+    pi = get_random_vector(s)
+
+    return (a,b,pi)
+
+
+
+def bw_test():
+
+    print("--bw_test--")
+
+    print( get_random_vector( 5 ) )
+
+    A = numpy.array([[0.9,0.07,0.03],[0.2,0.6,0.2],[0.15,0.05,0.8]])
+    B = numpy.array([[0.9,0.005,0.07,0.005,0.02],[0.3,0.2,0.4,0.04,0.06],[0.5,0.03,0.03,0.14,0.3] ])
+    pi = numpy.array( [0.8,0.15,0.05] )
+    hmm = HMM(A,B,pi)
+
+
+    num = 3
+    data_len = 20
+    s = numpy.empty( (num, data_len), dtype=int )
+    e = numpy.empty( (num, data_len), dtype=int )
+
+    for i in range(num):
+        s[i], e[i] = hmm.generate( data_len )
+
+
+    hmmr = HMM( *get_random_parameters(3,5) )
+    hmmr.baum_welch( e )
+
 
 
 def main():
@@ -183,6 +255,9 @@ def main():
     print( numpy.exp(p) )
     print(ob)
     print( path )
+
+
+    bw_test()
 
 
     #hmm2 = HMM.from_parameters(A,B,pi)

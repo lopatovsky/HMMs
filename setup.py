@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy
 
 setup(
-    name='maze',
+    name='cthmm',
     version='0.1',
     description='HMM and CT-HMM library',
     author='Lukas Lopatovsky',
