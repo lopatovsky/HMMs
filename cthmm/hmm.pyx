@@ -15,7 +15,7 @@ cdef class HMM:
 
     """Parameters _loga, _logb, _logpi are log likelihoods of _a, _b and _pi used to avoid underflow."""
     cdef numpy.ndarray _a #todo used only in generate, maybe can be erased.
-    cdef numpy.ndarray _b #
+    cdef numpy.ndarray _b #todo parameters without log will not be recalculated after bw alg. delete them.
     cdef numpy.ndarray _pi #
     cdef numpy.ndarray _loga
     cdef numpy.ndarray _logb
@@ -148,9 +148,16 @@ cdef class HMM:
         cdef float_t max_p              # faster for:  max_p = numpy.amax( vec )
         cdef int i                      #
         max_p = vec[0]                  #
-        for i in range(vec.shape[0]):   #
+        for i in range(1,vec.shape[0]):   #
             if max_p < vec[i] : max_p = vec[i] #
         return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
+
+    cdef float_t log_sum_elem(self, float_t x, float_t y ):
+        """Count sum of two items, that contain logaritmic probabilities using log-sum-exp trick"""
+        cdef float_t max_p
+        if x > y: max_p = x
+        else    : max_p = y
+        return max_p + numpy.log( numpy.exp( x - max_p ) + numpy.exp( y - max_p ) )
 
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
         """Given forward and backward variables, count the probability for any state in any time"""
@@ -179,13 +186,14 @@ cdef class HMM:
 
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
 
-        return ksi
+        return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
-        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
 
         for row in data:
@@ -194,9 +202,47 @@ cdef class HMM:
             beta =  self.backward( row )
             gamma = self.single_state_prob( alpha, beta )
 
-            start_time = time.time()
+
             ksi = self.double_state_prob( alpha, beta, row )
+
+            start_time = time.time()
+
+            gamma_sum = numpy.empty( gamma.shape[1] , dtype=numpy.float64 )
+            ksi_sum = numpy.empty( ( ksi.shape[1], ksi.shape[2] ) , dtype=numpy.float64 )
+            obs_sum = numpy.zeros( ( self._logb.shape[0], self._logb.shape[1] ) , dtype=numpy.float64 )
+
+            self._logpi = gamma[1,:]
+
+            #expected number of transition from i to j
+            for i in range( ksi.shape[1] ):
+                for j in range( ksi.shape[2] ):
+                    ksi_sum[i,j] = self.log_sum( ksi[:,i,j] )
+
+            #expected number of transition from state i
+            for i in range( gamma.shape[1] ):
+                gamma_sum[i] = self.log_sum( gamma[:-1,i] )
+
+            #transition matrix estimation
+            self._loga = ksi_sum - gamma_sum #todo slow, wrong?
+
+            #expected number of visiting state i and observing symbol v
+            for t in range( row.shape[0] ):
+                for i in range( obs_sum.shape[0] ):
+                    obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
+
+            #expected number of visiting state i
+            for i in range( gamma.shape[1] ):  #full length sum
+                gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
+
+
+            self._logb = obs_sum - gamma_sum
+
+
             print("--- %s seconds ---" % (time.time() - start_time))
+
+
+
+
 
 
 
@@ -204,9 +250,6 @@ cdef class HMM:
     def from_file( self,file_path ):
         """Initialize the HMM by the file from the file_path storing the parameters A,B,Pi""" ##TODO define the file format.
         print("hello file")
-
-    def _init__(self,num):
-        print(num)
 
     def meow(self):
         """Make the HMM to meow"""
