@@ -89,7 +89,7 @@ cdef class HMM:
         states_num = self._a.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] beta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
-        beta[-1,:] = 0  #log(1) = 0
+        beta[-1,:] = 0 #log(1) = 0
         for i in range(size-2, -1,-1):
             for s in range(states_num):
                 beta[i,s] = self.log_sum( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] )
@@ -174,16 +174,15 @@ cdef class HMM:
                                                                   numpy.ndarray[float_t, ndim=2] beta,
                                                                   numpy.ndarray[int_t, ndim=1  ] emissions):
         """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
-        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0],alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0]-1,alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
         cdef numpy.ndarray[float_t, ndim=2] loga = self._loga  #Such declaration make it cca 10% faster
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
 
 
-        for t in range( ksi.shape[0] - 1):
+        for t in range( ksi.shape[0]):
             for i in range( ksi.shape[1]):
                 for j in range( ksi.shape[2]):
                     ksi[t,i,j] = alpha[t,i] + loga[i,j] + logb[j, emissions[t+1] ] + beta[t+1,j]
-
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
@@ -196,14 +195,30 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
 
+
         for row in data:
+
+            print( "row" )
+            print( row )
 
             alpha = self.forward ( row )
             beta =  self.backward( row )
+
+            print( "numpy.exp( alpha )"  )
+            print( numpy.exp( alpha )  )
+            print( "numpy.exp( beta )"  )
+            print( numpy.exp( beta )  )
+
+
             gamma = self.single_state_prob( alpha, beta )
-
-
             ksi = self.double_state_prob( alpha, beta, row )
+
+
+
+            print( "numpy.exp( gamma )"  )
+            print( numpy.exp( gamma )  )
+            print( "numpy.exp( ksi )"  )
+            print( numpy.exp( ksi )  )
 
             start_time = time.time()
 
@@ -223,19 +238,37 @@ cdef class HMM:
                 gamma_sum[i] = self.log_sum( gamma[:-1,i] )
 
             #transition matrix estimation
-            self._loga = ksi_sum - gamma_sum #todo slow, wrong?
+            self._loga = (ksi_sum.T - gamma_sum).T
+
+            print( "numpy.exp( ksi_sum )"  )
+            print( numpy.exp( ksi_sum )  )
+            print( "numpy.exp( gamma_sum )"  )
+            print( numpy.exp( gamma_sum )  )
+            print( "numpy.exp( self._loga )"  )
+            print( numpy.exp( self._loga )  )
 
             #expected number of visiting state i and observing symbol v
             for t in range( row.shape[0] ):
                 for i in range( obs_sum.shape[0] ):
-                    obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
+                    if obs_sum[i,row[t]] == 0:
+                        obs_sum[i,row[t]] = gamma[t,i]
+                    else:
+                        obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
+
 
             #expected number of visiting state i
             for i in range( gamma.shape[1] ):  #full length sum
                 gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
 
 
-            self._logb = obs_sum - gamma_sum
+            self._logb = (obs_sum.T - gamma_sum).T
+
+            print( "numpy.exp( obs_sum )"  )
+            print( numpy.exp( obs_sum )  )
+            print( "numpy.exp( gamma_sum )"  )
+            print( numpy.exp( gamma_sum )  )
+            print( "numpy.exp( self._logb )"  )
+            print( numpy.exp( self._logb )  )
 
 
             print("--- %s seconds ---" % (time.time() - start_time))
@@ -283,6 +316,21 @@ def get_random_parameters( s, o ):
 def bw_test():
 
     print("--bw_test--")
+
+    print("small test:")
+
+    A = numpy.array([[0.9,0.1],[0.4,0.6]])
+    B = numpy.array([[0.9,0.1],[0.2,0.8]])
+    pi = numpy.array( [0.8,0.2] )
+    hmm = HMM(A,B,pi)
+
+    data = numpy.array([[0,1,1]]);
+    hmm.baum_welch( data )
+
+
+
+    return
+    print("big test")
 
     print( get_random_vector( 5 ) )
 
