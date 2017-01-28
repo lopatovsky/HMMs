@@ -152,10 +152,9 @@ cdef class HMM:
             if max_p < vec[i] : max_p = vec[i] #
         return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
 
-
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
         """Given forward and backward variables, count the probability for any state in any time"""
-        cdef numpy.ndarray[float_t, ndim=2] gamma #= numpy.empty( (alpha.shape[0],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=2] gamma
         cdef float_t max_p, log_sum
 
         gamma = alpha + beta
@@ -164,26 +163,41 @@ cdef class HMM:
 
         return gamma
 
+    cpdef numpy.ndarray[float_t, ndim=3] double_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha,
+                                                                  numpy.ndarray[float_t, ndim=2] beta,
+                                                                  numpy.ndarray[int_t, ndim=1  ] emissions):
+        """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
+        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0],alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga  #Such declaration make it cca 10% faster
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+
+
+        for t in range( ksi.shape[0] - 1):
+            for i in range( ksi.shape[1]):
+                for j in range( ksi.shape[2]):
+                    ksi[t,i,j] = alpha[t,i] + loga[i,j] + logb[j, emissions[t+1] ] + beta[t+1,j]
+
+            ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
+
+        return ksi
+
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma
+        cdef numpy.ndarray[float_t, ndim=3] ksi
 
         for row in data:
 
-            start_time = time.time()
             alpha = self.forward ( row )
-            #if( numpy.all(alpha == alpha2) ): print ("ok")
             beta =  self.backward( row )
-
-            print("--fb- %s seconds ---" % (time.time() - start_time))
+            gamma = self.single_state_prob( alpha, beta )
 
             start_time = time.time()
-            gamma = self.single_state_prob( alpha, beta )
+            ksi = self.double_state_prob( alpha, beta, row )
             print("--- %s seconds ---" % (time.time() - start_time))
 
-        pass
 
 
 
