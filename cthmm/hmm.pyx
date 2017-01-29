@@ -143,7 +143,7 @@ cdef class HMM:
 
         return ( max_p, path )
 
-    cdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
+    cpdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
         """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""
         cdef float_t max_p              # faster for:  max_p = numpy.amax( vec )
         cdef int i                      #
@@ -152,7 +152,7 @@ cdef class HMM:
             if max_p < vec[i] : max_p = vec[i] #
         return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
 
-    cdef float_t log_sum_elem(self, float_t x, float_t y ):
+    cpdef float_t log_sum_elem(self, float_t x, float_t y ):
         """Count sum of two items, that contain logaritmic probabilities using log-sum-exp trick"""
         cdef float_t max_p
         if x > y: max_p = x
@@ -205,7 +205,7 @@ cdef class HMM:
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
 
-        for i in range(25):
+        for i in range(2):
 
             print("iter ", i)
 
@@ -345,7 +345,8 @@ def bw_test():
         s[i], e[i] = hmm.generate( data_len )
         print( e[i] )
 
-    hmmr = HMM( *get_random_parameters(3,5) )
+    hmmr = HMM( A,B,pi )
+    #hmmr = HMM( *get_random_parameters(3,5) )
     hmmr.baum_welch( e )
 
 
@@ -405,6 +406,7 @@ def main():
     print(ob)
     print( path )
 
+    return
 
     bw_test()
 
