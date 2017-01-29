@@ -350,14 +350,28 @@ def bw_test():
 
 
     #print(e)
+    real_est = 0
+    guess_est = 0
+    real_vit = 0
+    guess_vit = 0
+
 
     for i in range( e.shape[0] ):
-        print(e[i])
-        print( hmm.viterbi(e[i]) )
-        print( hmmr.viterbi(e[i]) )
-        print( numpy.exp( hmm.emission_estimate( e[i] ) ) )
-        print( numpy.exp( hmmr.emission_estimate( e[i] ) ))
+        #print(e[i])
 
+        real_est += numpy.exp( hmm.emission_estimate( e[i] ) )
+        guess_est += numpy.exp( hmmr.emission_estimate( e[i] ) )
+
+        va, vb = hmm.viterbi(e[i])
+        var, vbr = hmmr.viterbi(e[i])
+        real_vit += numpy.exp(va)
+        guess_vit += numpy.exp(var)
+
+
+    print("real_est", real_est)
+    print("guess_est",guess_est)
+    print("real_vit",real_vit)
+    print("guess_vit",guess_vit)
 
     print("actual arrays: ")
     print(pi)
