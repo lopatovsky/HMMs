@@ -48,9 +48,9 @@ cdef class HMM:
     #    """From given state and emission sequence calculate their likelihood estimation given model parameters"""
     #
 
-    cpdef emission_estimate(self, emission ):
+    cpdef emission_estimate(self, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
-        return numpy.sum(  numpy.exp( self.forward( emission )[-1,:] ) )#TODO underflow
+        return  self.log_sum( self.forward( emissions )[-1,:] )
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
@@ -205,7 +205,7 @@ cdef class HMM:
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
 
-        for i in range(100):
+        for i in range(25):
 
             print("iter ", i)
 
@@ -230,6 +230,10 @@ cdef class HMM:
                 #expected number of being in state i in time 0
                 for i in range( s_num ):
                     pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
+
+                #print("pi")
+                #print( numpy.exp(gamma[0,:]) )
+                #print( numpy.exp( pi_sum ) )
 
                 #expected number of transition from i to j
                 for i in range( s_num ):
@@ -322,9 +326,6 @@ def bw_test():
 
     print( hmm.viterbi( data[0] ) )
 
-
-
-    return
     print("big test")
 
     print( get_random_vector( 5 ) )
@@ -335,17 +336,33 @@ def bw_test():
     hmm = HMM(A,B,pi)
 
 
-    num = 3
-    data_len = 2000
+    num = 50
+    data_len = 50
     s = numpy.empty( (num, data_len), dtype=int )
     e = numpy.empty( (num, data_len), dtype=int )
 
     for i in range(num):
         s[i], e[i] = hmm.generate( data_len )
+        print( e[i] )
 
-
-    hmmr = HMM( *get_random_parameters(10,10) )
+    hmmr = HMM( *get_random_parameters(3,5) )
     hmmr.baum_welch( e )
+
+
+    #print(e)
+
+    for i in range( e.shape[0] ):
+        print(e[i])
+        print( hmm.viterbi(e[i]) )
+        print( hmmr.viterbi(e[i]) )
+        print( numpy.exp( hmm.emission_estimate( e[i] ) ) )
+        print( numpy.exp( hmmr.emission_estimate( e[i] ) ))
+
+
+    print("actual arrays: ")
+    print(pi)
+    print(A)
+    print(B)
 
 
 
