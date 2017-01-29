@@ -13,19 +13,17 @@ ctypedef numpy.int_t int_t
 
 cdef class HMM:
 
-    """Parameters _loga, _logb, _logpi are log likelihoods of _a, _b and _pi used to avoid underflow."""
-    cdef numpy.ndarray _a #todo used only in generate, maybe can be erased.
-    cdef numpy.ndarray _b #todo parameters without log will not be recalculated after bw alg. delete them.
-    cdef numpy.ndarray _pi #
+    """Parameters _loga, _logb, _logpi are log likelihoods to avoid underflow."""
     cdef numpy.ndarray _loga
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
 
     def __init__(self, A, B, Pi):
         """Initialize the HMM by given parameters."""
-        self._a = A
-        self._b = B
-        self._pi = Pi
+        self.set_parameters( A, B, Pi)
+
+    def set_parameters( self, A, B, Pi ):
+        """Set parameters as their logs to avoid underflow"""
         self._loga = numpy.log(A)
         self._logb = numpy.log(B)
         self._logpi = numpy.log(Pi)
@@ -35,13 +33,17 @@ cdef class HMM:
 
     def generate(self, size ):
         """Randomly generate a sequence of states and emissions from model parameters."""
+        a = numpy.exp( self._loga )
+        b = numpy.exp( self._logb )
+        pi = numpy.exp( self._logpi )
+
         states = numpy.empty(size,dtype=int)
         emissions = numpy.empty(size,dtype=int)
-        current_state = numpy.random.choice( self._pi.shape[0], 1, p= self._pi)
+        current_state = numpy.random.choice( pi.shape[0], 1, p= pi)
         for i in range(size):
             states[i] = current_state
-            emissions[i] =  numpy.random.choice( self._b.shape[1],1, p = self._b[ current_state,:].flatten() )
-            current_state = numpy.random.choice( self._a.shape[1],1, p = self._a[ current_state,:].flatten() )
+            emissions[i] =  numpy.random.choice( b.shape[1],1, p = b[ current_state,:].flatten() )
+            current_state = numpy.random.choice( a.shape[1],1, p = a[ current_state,:].flatten() )
         return ( states, emissions )
 
     #cpdef estimate(self, states, emissions):
@@ -62,7 +64,7 @@ cdef class HMM:
         cdef int i, s, size, states_num,
 
         size = emissions.shape[0]
-        states_num = self._a.shape[0]
+        states_num = self._loga.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
@@ -86,7 +88,7 @@ cdef class HMM:
         cdef int i, s, size, states_num
 
         size = emissions.shape[0]
-        states_num = self._a.shape[0]
+        states_num = self._loga.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] beta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
         beta[-1,:] = 0  #log(1) = 0
