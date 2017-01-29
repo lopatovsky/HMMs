@@ -106,9 +106,9 @@ cdef class HMM:
         cdef float_t max_p
 
         size = emissions.shape[0]
-        states_num = self._a.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
-        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.full( (size,states_num), 0, dtype=numpy.int ) #numpy.zeros( (size, states_num ))
+        states_num = self._loga.shape[0]
+        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
 
         delta[0,:] = logpi + logb[:, int(emissions[0]) ]
         psi[0,:] = 0
@@ -124,10 +124,9 @@ cdef class HMM:
                         psi[i,s] = r
 
                 delta[i,s] += logb[s,emissions[i]]
-        #print(numpy.exp(delta))
-        #print(psi)
 
         max_p = delta[-1,0]
+
         p = 0
 
         for s in range(1,states_num):
@@ -178,12 +177,13 @@ cdef class HMM:
         cdef numpy.ndarray[float_t, ndim=2] loga = self._loga  #Such declaration make it cca 10% faster
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
 
-
         for t in range( ksi.shape[0]):
             for i in range( ksi.shape[1]):
                 for j in range( ksi.shape[2]):
                     ksi[t,i,j] = alpha[t,i] + loga[i,j] + logb[j, emissions[t+1] ] + beta[t+1,j]
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
+
+        print(numpy.exp(ksi))
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
@@ -382,19 +382,14 @@ def bw_test():
 
 
 def main():
-    #my_hmm = HMM()
+
+
     A = numpy.array([[0.9,0.1],[0.4,0.6]])
     B = numpy.array([[0.9,0.1],[0.2,0.8]])
     pi = numpy.array( [0.8,0.2] )
     hmm = HMM(A,B,pi)
-    (s,e) = hmm.generate(3)
-    print(s)
-    print(e)
-    e = numpy.array([0,1])
 
-    print( numpy.exp(hmm.forward(e) ) )
-    print( numpy.exp(hmm.backward(e) ) )
-    print( (hmm.emission_estimate(e) ) )
+    emissions = numpy.array([0,1])
 
     print("Viterbi: ")
 
@@ -403,8 +398,14 @@ def main():
 
     p, path = hmm.viterbi( ob )
     print( numpy.exp(p) )
-    print(ob)
-    print( path )
+    print(ob.tolist())
+    print( path.tolist() )
+
+
+    p, path = hmm.viterbi( t1 )
+    print( numpy.exp(p) )
+    print(ob.tolist())
+    print( path.tolist() )
 
     return
 
