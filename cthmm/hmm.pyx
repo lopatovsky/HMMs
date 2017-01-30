@@ -18,6 +18,20 @@ cdef class HMM:
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
 
+
+    @property
+    def a(self):
+        return numpy.exp( self._loga )
+
+    @property
+    def b(self):
+        return numpy.exp( self._logb )
+
+    @property
+    def pi(self):
+        return numpy.exp( self._logpi )
+
+
     def __init__(self, A, B, Pi):
         """Initialize the HMM by given parameters."""
         self.set_parameters( A, B, Pi)
@@ -185,13 +199,16 @@ cdef class HMM:
                     ksi[t,i,j] = alpha[t,i] + loga[i,j] + logb[j, emissions[t+1] ] + beta[t+1,j]
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
 
-        print(numpy.exp(ksi))
+        #print(numpy.exp(ksi))
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
 
     #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
-    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data):
+    #TODO2 - change default value to -1 - convergence
+    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-HMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
+
+    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
@@ -207,7 +224,7 @@ cdef class HMM:
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
 
-        for i in range(2):
+        for i in range( iterations ):
 
             print("iter ", i)
 
@@ -281,7 +298,7 @@ cdef class HMM:
 
     def from_file( self,file_path ):
         """Initialize the HMM by the file from the file_path storing the parameters A,B,Pi""" ##TODO define the file format.
-        print("hello file")
+        pass
 
     def meow(self):
         """Make the HMM to meow"""
