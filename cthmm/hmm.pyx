@@ -32,9 +32,15 @@ cdef class HMM:
         return numpy.exp( self._logpi )
 
 
-    def __init__(self, A, B, Pi):
+    def __init__(self, A = 0, B = 0, Pi = 0):
         """Initialize the HMM by given parameters."""
-        self.set_parameters( A, B, Pi)
+        if B == 0: self.set_parameters( *self.from_file( A ) )
+        else: self.set_parameters( A, B, Pi)
+
+    def from_file( self, path ):
+
+    def save( path ):
+        numpy.savez( self.a, self.b, self.pi )
 
     def set_parameters( self, A, B, Pi ):
         """Set parameters as their logs to avoid underflow"""
@@ -218,6 +224,18 @@ cdef class HMM:
     #TODO2 - change default value to -1 - convergence
     #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-HMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
+    def baum_welch_learn_curve( self, data, iteration ):
+        """Estimate parameters and in evey iteration count the data estimation, so it could return learning curve"""
+        graph = numpy.empty(iteration+1)
+        graph[0] = self.data_estimate(data)
+
+        for i in range(1,iteration+1):
+            self.baum_welch( data, 1 )
+            graph[i] = self.data_estimate(data)
+
+        return graph
+
+
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
@@ -234,7 +252,10 @@ cdef class HMM:
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
 
+
         for i in range( iterations ):
+
+
 
             #print("iter ", i)
 
@@ -302,6 +323,7 @@ cdef class HMM:
             #print( numpy.exp( self._logpi ) )
             #print( numpy.exp( self._loga ) )
             #print( numpy.exp( self._logb ) )
+
 
 
 
