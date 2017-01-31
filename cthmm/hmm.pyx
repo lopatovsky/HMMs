@@ -34,13 +34,15 @@ cdef class HMM:
 
     def __init__(self, A = 0, B = 0, Pi = 0):
         """Initialize the HMM by given parameters."""
-        if B == 0: self.set_parameters( *self.from_file( A ) )
+        if isinstance(A, str): self.from_file( A )
         else: self.set_parameters( A, B, Pi)
 
-    def from_file( self, path ):
+    def read_model( self, path ):
+        npz = numpy.load( path )
+        self.set_parameters( npz['a'], npz['b'], npz['pi'] )
 
-    def save( path ):
-        numpy.savez( self.a, self.b, self.pi )
+    def save_model( self, path ):
+        numpy.savez( path, a=self.a, b=self.b, pi=self.pi )
 
     def set_parameters( self, A, B, Pi ):
         """Set parameters as their logs to avoid underflow"""
