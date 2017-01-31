@@ -41,10 +41,12 @@ cdef class HMM:
 
     @classmethod
     def from_file( cls, path ):
+        """Initialize the class by reading parameters from file"""
         return cls( *HMM.get_params_from_file(path) )
 
     @classmethod
     def random( cls, s, o ):
+        """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
         return cls( *HMM.get_random_params( s, o ) )
 
     def set_params( self, A, B, Pi):
@@ -54,18 +56,21 @@ cdef class HMM:
         self._logpi = numpy.log(Pi)
 
     def set_params_from_file( self, path ):
+        """Set parameters by reading them from file"""
         self.set_params( *HMM.get_params_from_file(path) )
 
     def set_params_random( self, s, o ):
+        """Set parameters by random. Size of 's' hidden states and 'o' output variables"""
         self.set_params( *HMM.get_random_params( s, o ) )
 
     def save_params( self, path ):
+        """Save parameters in the file given by 'path'"""
         numpy.savez( path, a=self.a, b=self.b, pi=self.pi )
 
 
     @staticmethod
     def get_params_from_file( path ):
-
+        """Get parameters by reading them from .npz file"""
         npz = numpy.load( path )
         return ( npz['a'], npz['b'], npz['pi'] )
 
