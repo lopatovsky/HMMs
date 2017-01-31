@@ -2,12 +2,24 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 
+import pandas as pd
+from IPython.display import display
+
+def print_parameters( hmm ):
+
+    print("Initial probabilities (π) :")
+    display( pd.DataFrame(hmm.pi) )
+    print("Transition probabilities matrix (A):")
+    display( pd.DataFrame(hmm.a) )
+    print("Emission probabilities matrix (B):")
+    display( pd.DataFrame(hmm.b) )
+
 def plot_hmm( s_seq, e_seq ):
 
     n = e_seq.shape[0]
     X = np.arange(n)
     Y0 = np.zeros(n)
-    Y1 = np.ones(n) 
+    Y1 = np.ones(n)
 
     fig, ax = plt.subplots()
 

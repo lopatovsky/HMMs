@@ -45,6 +45,8 @@ cdef class HMM:
     def check_parameters(self):
         pass #TODO
 
+
+    #TODO test it
     def generate(self, size ):
         """Randomly generate a sequence of states and emissions from model parameters."""
         a = numpy.exp( self._loga )
@@ -67,6 +69,14 @@ cdef class HMM:
     cpdef emission_estimate(self, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
         return  self.log_sum( self.forward( emissions )[-1,:] )
+
+    cpdef data_estimate( self, numpy.ndarray[int_t, ndim=2] data ):
+        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
+        cdef float sm = 0
+        for row in data:
+            sm += self.emission_estimate( row )
+        return sm
+
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
