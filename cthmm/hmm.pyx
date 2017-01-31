@@ -31,24 +31,65 @@ cdef class HMM:
     def pi(self):
         return numpy.exp( self._logpi )
 
+    @property
+    def params( self ):
+        return( self.a, self.b, self.pi )
 
-    def __init__(self, A = 0, B = 0, Pi = 0):
+    def __init__(self, A,B,Pi):
         """Initialize the HMM by given parameters."""
-        if isinstance(A, str): self.from_file( A )
-        else: self.set_parameters( A, B, Pi)
+        self.set_params( A,B,Pi )
 
-    def read_model( self, path ):
-        npz = numpy.load( path )
-        self.set_parameters( npz['a'], npz['b'], npz['pi'] )
+    @classmethod
+    def from_file( cls, path ):
+        return cls( *HMM.get_params_from_file(path) )
 
-    def save_model( self, path ):
-        numpy.savez( path, a=self.a, b=self.b, pi=self.pi )
+    @classmethod
+    def random( cls, s, o ):
+        return cls( *HMM.get_random_params( s, o ) )
 
-    def set_parameters( self, A, B, Pi ):
+    def set_params( self, A, B, Pi):
         """Set parameters as their logs to avoid underflow"""
         self._loga = numpy.log(A)
         self._logb = numpy.log(B)
         self._logpi = numpy.log(Pi)
+
+    def set_params_from_file( self, path ):
+        self.set_params( *HMM.get_params_from_file(path) )
+
+    def set_params_random( self, s, o ):
+        self.set_params( *HMM.get_random_params( s, o ) )
+
+    def save_params( self, path ):
+        numpy.savez( path, a=self.a, b=self.b, pi=self.pi )
+
+
+    @staticmethod
+    def get_params_from_file( path ):
+
+        npz = numpy.load( path )
+        return ( npz['a'], npz['b'], npz['pi'] )
+
+    @staticmethod
+    def get_random_vector( s ):
+        """Generate random vector of size (s), with all values summing to one"""
+        vec = numpy.random.random(s)
+        return vec / numpy.sum(vec)
+
+    @staticmethod
+    def get_random_params( s, o ):
+        """Generate random parameters A,B and Pi, for number of hidden states (s) and output variables (o)"""
+
+        a = numpy.empty( [s,s] )
+        b = numpy.empty( [s,o] )
+        pi = numpy.empty( s )
+
+        for i in range( a.shape[0] ):
+            a[i,:] = HMM.get_random_vector(s)
+        for i in range( b.shape[0]):
+            b[i,:] = HMM.get_random_vector(o)
+        pi = HMM.get_random_vector(s)
+
+        return(a,b,pi)
 
     def check_parameters(self):
         pass #TODO
@@ -226,8 +267,8 @@ cdef class HMM:
     #TODO2 - change default value to -1 - convergence
     #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-HMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
-    def baum_welch_learn_curve( self, data, iteration ):
-        """Estimate parameters and in evey iteration count the data estimation, so it could return learning curve"""
+    def baum_welch_graph( self, data, iteration ):
+        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
         graph[0] = self.data_estimate(data)
 
@@ -327,44 +368,19 @@ cdef class HMM:
             #print( numpy.exp( self._logb ) )
 
 
-
-
-
-    def from_file( self,file_path ):
-        """Initialize the HMM by the file from the file_path storing the parameters A,B,Pi""" ##TODO define the file format.
-        pass
-
     def meow(self):
         """Make the HMM to meow"""
         print('meow!')
 
 
 
-def get_random_vector( s ):
-    """Generate random vector of size (s), with all values summing to one"""
-    vec = numpy.random.random(s)
-    return vec / numpy.sum(vec)
 
 
-def get_random_parameters( s, o ):
-    """Generate random parameters A,B and Pi, for number of hidden states (s) and output variables (o)"""
-
-    a = numpy.empty( [s,s] )
-    b = numpy.empty( [s,o] )
-    pi = numpy.empty( s )
-
-    for i in range( a.shape[0] ):
-        a[i,:] = get_random_vector(s)
-    for i in range( b.shape[0]):
-        b[i,:] = get_random_vector(o)
-    pi = get_random_vector(s)
-
-    return (a,b,pi)
 
 
 
 def bw_test():
-
+    return
     print("--bw_test--")
 
     print("small test:")
@@ -436,38 +452,8 @@ def bw_test():
 
 def main():
 
-
-    A = numpy.array([[0.9,0.1],[0.4,0.6]])
-    B = numpy.array([[0.9,0.1],[0.2,0.8]])
-    pi = numpy.array( [0.8,0.2] )
-    hmm = HMM(A,B,pi)
-
-    emissions = numpy.array([0,1])
-
-    print("Viterbi: ")
-
-    ob = numpy.array([0,0,0,1,1,0,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,1,1,1])
-    t1 = numpy.array([0,1,0,1,1])
-
-    p, path = hmm.viterbi( ob )
-    print( numpy.exp(p) )
-    print(ob.tolist())
-    print( path.tolist() )
-
-
-    p, path = hmm.viterbi( t1 )
-    print( numpy.exp(p) )
-    print(ob.tolist())
-    print( path.tolist() )
-
-    return
-
     bw_test()
 
-
-    #hmm2 = HMM.from_parameters(A,B,pi)
-    #hmm2 = HMM.from_file("x.hmm")
-    #my_hmm.meow()
 
 if __name__ == "__main__":
     main()

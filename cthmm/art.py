@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+#TODO rename to numpy
 
 import pandas as pd
 from IPython.display import display
@@ -42,4 +43,5 @@ def plot_hmm( s_seq, e_seq ):
         plt.annotate( c , xy=(x, y), xycoords='data', xytext=(-5, -5), textcoords='offset points', fontsize=16 )
 
     plt.show()
+
 
