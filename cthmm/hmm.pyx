@@ -236,7 +236,7 @@ cdef class HMM:
 
         for i in range( iterations ):
 
-            print("iter ", i)
+            #print("iter ", i)
 
             ksi_sum = numpy.full( ( s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
@@ -299,9 +299,9 @@ cdef class HMM:
             #observetion symbol emission probabilities estimation
             self._logb = (obs_sum.T - gamma_full_sum).T
 
-            print( numpy.exp( self._logpi ) )
-            print( numpy.exp( self._loga ) )
-            print( numpy.exp( self._logb ) )
+            #print( numpy.exp( self._logpi ) )
+            #print( numpy.exp( self._loga ) )
+            #print( numpy.exp( self._logb ) )
 
 
 
