@@ -11,7 +11,7 @@ cimport cython
 ctypedef numpy.float64_t float_t
 ctypedef numpy.int_t int_t
 
-cdef class HMM:
+cdef class DtHMM:
 
     """Parameters _loga, _logb, _logpi are log likelihoods to avoid underflow."""
     cdef numpy.ndarray _loga
@@ -36,18 +36,18 @@ cdef class HMM:
         return( self.a, self.b, self.pi )
 
     def __init__(self, A,B,Pi):
-        """Initialize the HMM by given parameters."""
+        """Initialize the DtHMM by given parameters."""
         self.set_params( A,B,Pi )
 
     @classmethod
     def from_file( cls, path ):
         """Initialize the class by reading parameters from file"""
-        return cls( *HMM.get_params_from_file(path) )
+        return cls( *DtHMM.get_params_from_file(path) )
 
     @classmethod
     def random( cls, s, o ):
         """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
-        return cls( *HMM.get_random_params( s, o ) )
+        return cls( *DtHMM.get_random_params( s, o ) )
 
     def set_params( self, A, B, Pi):
         """Set parameters as their logs to avoid underflow"""
@@ -57,11 +57,11 @@ cdef class HMM:
 
     def set_params_from_file( self, path ):
         """Set parameters by reading them from file"""
-        self.set_params( *HMM.get_params_from_file(path) )
+        self.set_params( *DtHMM.get_params_from_file(path) )
 
     def set_params_random( self, s, o ):
         """Set parameters by random. Size of 's' hidden states and 'o' output variables"""
-        self.set_params( *HMM.get_random_params( s, o ) )
+        self.set_params( *DtHMM.get_random_params( s, o ) )
 
     def save_params( self, path ):
         """Save parameters in the file given by 'path'"""
@@ -89,10 +89,10 @@ cdef class HMM:
         pi = numpy.empty( s )
 
         for i in range( a.shape[0] ):
-            a[i,:] = HMM.get_random_vector(s)
+            a[i,:] = DtHMM.get_random_vector(s)
         for i in range( b.shape[0]):
-            b[i,:] = HMM.get_random_vector(o)
-        pi = HMM.get_random_vector(s)
+            b[i,:] = DtHMM.get_random_vector(o)
+        pi = DtHMM.get_random_vector(s)
 
         return(a,b,pi)
 
@@ -270,7 +270,7 @@ cdef class HMM:
 
     #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
     #TODO2 - change default value to -1 - convergence
-    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-HMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
+    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
     def baum_welch_graph( self, data, iteration ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
@@ -374,7 +374,7 @@ cdef class HMM:
 
 
     def meow(self):
-        """Make the HMM to meow"""
+        """Make the DtHMM to meow"""
         print('meow!')
 
 
@@ -393,7 +393,7 @@ def bw_test():
     A = numpy.array([[0.9,0.1],[0.4,0.6]])
     B = numpy.array([[0.9,0.1],[0.2,0.8]])
     pi = numpy.array( [0.8,0.2] )
-    hmm = HMM(A,B,pi)
+    hmm = DtHMM(A,B,pi)
 
     data = numpy.array([[0,1,1]]);
     hmm.baum_welch( data )
@@ -407,7 +407,7 @@ def bw_test():
     A = numpy.array([[0.9,0.07,0.03],[0.2,0.6,0.2],[0.15,0.05,0.8]])
     B = numpy.array([[0.9,0.005,0.07,0.005,0.02],[0.3,0.2,0.4,0.04,0.06],[0.5,0.03,0.03,0.14,0.3] ])
     pi = numpy.array( [0.8,0.15,0.05] )
-    hmm = HMM(A,B,pi)
+    hmm = DtHMM(A,B,pi)
 
 
     num = 50
@@ -419,8 +419,8 @@ def bw_test():
         s[i], e[i] = hmm.generate( data_len )
         print( e[i] )
 
-    hmmr = HMM( A,B,pi )
-    #hmmr = HMM( *get_random_parameters(3,5) )
+    hmmr = DtHMM( A,B,pi )
+    #hmmr = DtHMM( *get_random_parameters(3,5) )
     hmmr.baum_welch( e )
 
 

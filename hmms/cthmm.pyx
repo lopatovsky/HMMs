@@ -1,8 +1,9 @@
 import numpy
+#import dthmm
 cimport numpy
 cimport cython
 
-class CTHMM:
+cdef class CtHMM:
 
     def __init__(self):
         pass
@@ -13,8 +14,9 @@ class CTHMM:
 
 
 def main():
-    my_hmm = CTHMM()
+    my_hmm = CtHMM()
     my_hmm.meow()
+
 
 if __name__ == "__main__":
     main()

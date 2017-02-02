@@ -1,4 +1,4 @@
-import cthmm
+import hmms
 import pytest
 import numpy
 
@@ -6,18 +6,18 @@ EPS = 1e-7
 
 @pytest.fixture
 def small_hmm():
-    """Create small HMM and basic emission sequence for testing of basic functionality"""
+    """Create small DtHMM and basic emission sequence for testing of basic functionality"""
     A = numpy.array([[0.9,0.1],[0.4,0.6]])
     B = numpy.array([[0.9,0.1],[0.2,0.8]])
     pi = numpy.array( [0.8,0.2] )
-    hmm = cthmm.HMM(A,B,pi)
+    hmm = hmms.DtHMM(A,B,pi)
 
     emissions = numpy.array([0,1])
     return ( hmm, emissions )
 
 @pytest.fixture
 def short_emission( small_hmm ):
-    """Return HMM and medium emission sequence"""
+    """Return DtHMM and medium emission sequence"""
     hmm, em = small_hmm
     em = numpy.array([0,1,1])
     return (hmm, em)
@@ -25,14 +25,14 @@ def short_emission( small_hmm ):
 
 @pytest.fixture
 def medium_emission( small_hmm ):
-    """Return HMM and medium emission sequence"""
+    """Return DtHMM and medium emission sequence"""
     hmm, em = small_hmm
     em = numpy.array([0,1,0,1,1])
     return (hmm, em)
 
 @pytest.fixture
 def long_emission( small_hmm ):
-    """Return HMM and longer emission sequence"""
+    """Return DtHMM and longer emission sequence"""
     hmm, em = small_hmm
     em = numpy.array([0,0,0,1,1,0,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,1,1,1])
     return (hmm, em)
@@ -69,7 +69,7 @@ def test_random_vector_and_log_sum( small_hmm ):
     hmm, em = small_hmm
 
     size = 1234
-    vec = cthmm.get_random_vector(size)
+    vec = hmms.DtHMM.get_random_vector(size)
     a = numpy.exp( hmm.log_sum( numpy.log(vec)  ) )
 
     assert float_equal( a, 1 )
@@ -79,7 +79,7 @@ def test_random_vector_and_log_sum_elem( small_hmm ):
     hmm, em = small_hmm
 
     size = 1234
-    vec = cthmm.get_random_vector ( size )
+    vec = hmms.DtHMM.get_random_vector ( size )
     a = 0
     for num in vec:
         a = numpy.exp(  hmm.log_sum_elem( numpy.log(a), numpy.log(num) ) )
@@ -143,7 +143,7 @@ def test_double_state_prob( short_emission, ab ):
 @pytest.fixture
 def small_random_hmm():
     """Create random hmm of two hidden states and two output varaibles."""
-    return cthmm.HMM( *cthmm.get_random_parameters(2,2) )
+    return hmms.DtHMM.random( 2,2 )
 
 @pytest.fixture
 def hmm_small_out():
@@ -151,7 +151,7 @@ def hmm_small_out():
     A = numpy.array([[0,1],[0,1]])
     B = numpy.array([[1,0],[0,1]])
     pi = numpy.array( [1,0] )
-    return cthmm.HMM(A,B,pi)
+    return hmms.DtHMM(A,B,pi)
 
 @pytest.fixture
 def hmm_cycle_out():
@@ -159,7 +159,7 @@ def hmm_cycle_out():
     A = numpy.array([[0,1],[1,0]])
     B = numpy.array([[1,0],[0,1]])
     pi = numpy.array( [0.5,0.5] )
-    return cthmm.HMM(A,B,pi)
+    return hmms.DtHMM(A,B,pi)
 
 def test_baum_welch_small( small_random_hmm, hmm_small_out ):
     """Test if baum_welch algorithm converge to the right parameters"""
