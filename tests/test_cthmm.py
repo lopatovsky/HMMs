@@ -24,6 +24,11 @@ def test_froward( small_hmm ):
 
     assert float_equal_mat( A, X )
 
+def test_meow():
+    hmm = hmms.CtHMM()
+    hmm.meow()
+    assert False
+
 
 ###Common methods TODO - move in separate file
 

@@ -1,4 +1,5 @@
 from .dthmm import *
-from .cthmm import CtHMM
+from .cthmm import *
+from .hmm import *
 from .art import *
-__all__ = ['dthmm', 'cthmm','art']
+__all__ = ['hmm','dthmm','cthmm','art']

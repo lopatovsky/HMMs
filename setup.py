@@ -10,7 +10,7 @@ setup(
     author_email='lopatovsky@gmail.com',
     license='GPL',
     url='https://github.com/lopatovsky/CT-HMM',
-    py_modules=['dthmm','cthmm'],
+    py_modules=['dthmm','cthmm','hmm'],
     ext_modules=cythonize('hmms/*.pyx', language_level=3, include_dirs=[numpy.get_include()]),
     include_dirs=[numpy.get_include()],
     install_requires=[
