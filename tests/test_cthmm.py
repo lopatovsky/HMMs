@@ -18,6 +18,7 @@ def test_main():
     #hmm.zmaz_ma( t )
 
     hmm.forward( t, e )
+    hmm.backward( t, e )
 
 
 

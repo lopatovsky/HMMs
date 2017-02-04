@@ -158,6 +158,11 @@ cdef class CtHMM(hmm.HMM):
         self._prepare_matrices( times )
         return self._forward( times, emissions )
 
+    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+        """Method for the single call of backward algorithm"""
+        self._prepare_matrices( times )
+        return self._backward( times, emissions )
+
 
     cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
@@ -187,7 +192,7 @@ cdef class CtHMM(hmm.HMM):
 
         return alpha
 
-    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] _backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
            Return logaritmus of probabilities.
         """
@@ -209,6 +214,134 @@ cdef class CtHMM(hmm.HMM):
                           + numpy.exp( numpy.asarray( self._pt[ self.tmap[ interval ],s,:]  ) ) )
 
         return beta
+
+    cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
+        """Given forward and backward variables, count the probability for any state in any time"""
+        cdef numpy.ndarray[float_t, ndim=2] gamma
+        cdef float_t max_p, log_sum
+
+        gamma = alpha + beta
+        for i in range(gamma.shape[0]):
+            gamma[i] -= self.log_sum(gamma[i])
+
+        return gamma
+
+    cpdef numpy.ndarray[float_t, ndim=3] double_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha,
+                                                                  numpy.ndarray[float_t, ndim=2] beta,
+                                                                  numpy.ndarray[int_t, ndim=1  ] times,
+                                                                  numpy.ndarray[int_t, ndim=1  ] emissions):
+        """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
+        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0]-1,alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef int interval
+
+        for t in range( ksi.shape[0]):
+
+            interval = times[t+1] - times[t]
+
+            for i in range( ksi.shape[1]):
+                for j in range( ksi.shape[2]):
+                    ksi[t,i,j] = alpha[t,i]                                              \
+                               + numpy.exp( self._pt[ self.tmap[ interval ],i,j] )       \
+                               + logb[j, emissions[t+1] ] + beta[t+1,j]
+
+            ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
+
+        #print(numpy.exp(ksi))
+
+        return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
+
+
+    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
+        """Estimate parameters by Baum-Welch algorithm.
+           Input array data is the numpy array of observation sequences.
+        """
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
+        cdef numpy.ndarray[float_t, ndim=3] ksi
+
+        #start_time = time.time()
+        #...
+        #print("--- %s seconds ---" % (time.time() - start_time))
+
+        cdef int s_num = self._logb.shape[0]  #number of states
+        cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
+
+        for i in range( iterations ):
+
+            #print("iter ", i)
+
+            ksi_sum = numpy.full( ( s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
+            obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
+            pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
+            gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
+            gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
+
+
+
+            for t , row in zip( times,data ):
+
+                alpha = self.forward ( t, row )
+                beta =  self.backward( t, row )
+
+                gamma = self.single_state_prob( alpha, beta )
+                ksi = self.double_state_prob( alpha, beta, t, row )
+
+                return
+
+                gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
+
+                #expected number of being in state i in time 0
+                for i in range( s_num ):
+                    pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
+
+                #print("pi")
+                #print( numpy.exp(gamma[0,:]) )
+                #print( numpy.exp( pi_sum ) )
+
+                #expected number of transition from i to j
+                for i in range( s_num ):
+                    for j in range( s_num ):
+                        ksi_sum[i,j] = self.log_sum_elem( ksi_sum[i,j], self.log_sum( ksi[:,i,j] ) )
+
+                #expected number of transition from state i
+                for i in range( s_num ):
+                    gamma_sum[i] = self.log_sum( gamma[:-1,i] )
+
+                #sum gamma to the whole dataset array
+                for i in range ( s_num ):
+                    gamma_part_sum[i] = self.log_sum_elem( gamma_part_sum[i], gamma_sum[i] )
+
+                #expected number of visiting state i and observing symbol v
+                for t in range( row.shape[0] ):
+                    for i in range( s_num ):
+                        obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
+
+                #expected number of visiting state i
+                for i in range( s_num ):  #full length sum
+                    gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
+
+                #sum gamma to the whole dataset array
+                for i in range ( s_num ):
+                    gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
+
+            #Update parameters:
+
+            #initial probabilities estimation
+            self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
+            #transition matrix estimation
+            self._loga = (ksi_sum.T - gamma_part_sum).T
+            #observetion symbol emission probabilities estimation
+            self._logb = (obs_sum.T - gamma_full_sum).T
+
+            #print( numpy.exp( self._logpi ) )
+            #print( numpy.exp( self._loga ) )
+            #print( numpy.exp( self._logb ) )
+
+
+
+
+
 
     cpdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
         """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""
