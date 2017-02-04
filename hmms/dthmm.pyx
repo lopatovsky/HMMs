@@ -143,7 +143,7 @@ cdef class DtHMM:
 
         size = emissions.shape[0]
         states_num = self._loga.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
@@ -167,7 +167,7 @@ cdef class DtHMM:
 
         size = emissions.shape[0]
         states_num = self._loga.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] beta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[float_t, ndim=2] beta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
 
         beta[-1,:] = 0  #log(1) = 0
         for i in range(size-2, -1,-1):

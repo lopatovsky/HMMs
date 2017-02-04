@@ -169,7 +169,7 @@ cdef class CtHMM(hmm.HMM):
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
 
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
@@ -187,23 +187,26 @@ cdef class CtHMM(hmm.HMM):
 
         return alpha
 
-    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
            Return logaritmus of probabilities.
         """
-        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num
+        cdef int i, s, size, states_num, interval
 
         size = emissions.shape[0]
-        states_num = self._loga.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] beta = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        states_num = self._q.shape[0]
+        cdef numpy.ndarray[float_t, ndim=2] beta = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
         beta[-1,:] = 0  #log(1) = 0
         for i in range(size-2, -1,-1):
+
+            interval = times[i+1] - times[i]
+
             for s in range(states_num):
-                beta[i,s] = self.log_sum( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] )
+                beta[i,s] = self.log_sum( beta[i+1,:] + logb[:, int(emissions[i+1]) ]
+                          + numpy.exp( numpy.asarray( self._pt[ self.tmap[ interval ],s,:]  ) ) )
 
         return beta
 
