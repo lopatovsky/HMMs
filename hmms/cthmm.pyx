@@ -163,20 +163,24 @@ cdef class CtHMM(hmm.HMM):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
            Return logaritmus of probabilities.
         """
-        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num,
+        cdef int i, s, size, states_num, interval
 
         size = emissions.shape[0]
-        states_num = self._loga.shape[0]
+        states_num = self._q.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.full( (size,states_num), 0, dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+
 
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
+
+            interval = times[i] - times[i-1]
+
             for s in range(states_num):
 
-                alpha[i,s] = self.log_sum( alpha[i-1,:]+ loga[:,s] )
+                alpha[i,s] = self.log_sum( alpha[i-1,:]
+                                         + numpy.exp( numpy.asarray( self._pt[ self.tmap[ interval ],:,s]  ) ) ) #TODO probably can be optimised omitting exp
 
             #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
@@ -202,6 +206,23 @@ cdef class CtHMM(hmm.HMM):
                 beta[i,s] = self.log_sum( beta[i+1,:] + loga[s,:] + logb[:, int(emissions[i+1]) ] )
 
         return beta
+
+    cpdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
+        """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""
+        cdef float_t max_p              # faster for:  max_p = numpy.amax( vec )
+        cdef int i                      #
+        max_p = vec[0]                  #
+        for i in range(1,vec.shape[0]):   #
+            if max_p < vec[i] : max_p = vec[i] #
+        return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
+
+    cpdef float_t log_sum_elem(self, float_t x, float_t y ):
+        """Count sum of two items, that contain logaritmic probabilities using log-sum-exp trick"""
+        cdef float_t max_p
+        if x > y: max_p = x
+        else    : max_p = y
+        return max_p + numpy.log( numpy.exp( x - max_p ) + numpy.exp( y - max_p ) )
+
 
 
     def meow(self):
