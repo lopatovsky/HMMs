@@ -118,27 +118,29 @@ cdef class CtHMM(hmm.HMM):
 
 
     #TODO implement variant for square and multiplay
-    cdef _prepare_matrices( self, numpy.ndarray[int_t, ndim=1] times ):
+    cdef _prepare_matrices( self, numpy.ndarray[int_t, ndim=2] times ):
         """Will pre-count exponencials of matrices for all different time intervals"""
+
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
         cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
 
-        self._pt = numpy.empty( (times.shape[0],q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
+        self._pt = numpy.empty( (times.shape[0]*times.shape[1],q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
         self.tmap = {} # TODO isn't dict to slow?
         cdef int interval, cnt = 0
 
-        for i in range ( 1, times.shape[0] ):
-            #TODO double intervals
-            interval = times[i] - times[i-1]
-            if interval not in self.tmap:
-               #print( "int: ", interval)
-               #print(scipy.linalg.expm( q * interval ))
+        for i in range( times.shape[0] ):
+            for j in range ( 1, times.shape[1] ):
+                #TODO double intervals
+                interval = times[i,j] - times[i,j-1]
+                if interval not in self.tmap:
+                   #print( "int: ", interval)
+                   #print(scipy.linalg.expm( q * interval ))
 
-               pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array
-               self._pt[cnt,:,:] = pt
+                   pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array
+                   self._pt[cnt,:,:] = pt
 
-               self.tmap[ interval ] = cnt
-               cnt+= 1
+                   self.tmap[ interval ] = cnt
+                   cnt+= 1
 
         #print("tmap")
         #print(self.tmap)
@@ -155,12 +157,12 @@ cdef class CtHMM(hmm.HMM):
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
-        self._prepare_matrices( times )
+        self._prepare_matrices( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
     cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of backward algorithm"""
-        self._prepare_matrices( times )
+        self._prepare_matrices( numpy.array( [times] ) )
         return self._backward( times, emissions )
 
 
@@ -257,8 +259,6 @@ cdef class CtHMM(hmm.HMM):
            Input array data is the numpy array of observation sequences.
         """
 
-        self._prepare_matrices( times )
-
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
@@ -284,12 +284,14 @@ cdef class CtHMM(hmm.HMM):
 
             for t , row in zip( times,data ):
 
-                alpha = self.forward ( t, row )
-                beta =  self.backward( t, row )
+                self._prepare_matrices( t )
+
+                alpha = self._forward ( t, row )
+                beta =  self._backward( t, row )
 
                 gamma = self.single_state_prob( alpha, beta )
                 ksi = self.double_state_prob( alpha, beta, t, row )
-
+                #TODO sum probs for same delta(t).
 
 
                 #expected number of being in state i in time 0
@@ -327,9 +329,6 @@ cdef class CtHMM(hmm.HMM):
             #print( numpy.exp( self._logpi ) )
             #print( numpy.exp( self._loga ) )
             #print( numpy.exp( self._logb ) )
-
-
-
 
 
 
