@@ -5,6 +5,7 @@ import numpy
 import scipy.linalg
 cimport numpy
 cimport cython
+from cython cimport view
 
 import random
 
@@ -19,8 +20,14 @@ ctypedef numpy.int_t int_t
 cdef class CtHMM(hmm.HMM):
 
     cdef numpy.ndarray _q
+
+    cdef dict tmap
+    cdef float_t [:,:,:] _pt
+
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
+
+
 
     @property
     def b(self):
@@ -78,7 +85,7 @@ cdef class CtHMM(hmm.HMM):
     def generate(self, size ):
         """Randomly generate a sequence of states and emissions from model parameters."""
         q = numpy.array( self._q )
-        qt = numpy.empty( q.shape )
+        pt = numpy.empty( q.shape )
 
         b = numpy.exp( self._logb )
         pi = numpy.exp( self._logpi )
@@ -89,7 +96,6 @@ cdef class CtHMM(hmm.HMM):
 
         current_state = numpy.random.choice( pi.shape[0], 1, p= pi)
         current_time = 0;
-        b = numpy.array( [[0.9,0.1],[0.1,0.9]] )
 
         for i in range(size):
             states[i] = current_state
@@ -111,7 +117,49 @@ cdef class CtHMM(hmm.HMM):
         return ( states, times, emissions )
 
 
-    cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] emissions):
+    #TODO implement variant for square and multiplay
+    cdef _prepare_matrices( self, numpy.ndarray[int_t, ndim=1] times ):
+        """Will pre-count exponencials of matrices for all different time intervals"""
+        cdef numpy.ndarray[float_t, ndim=2] q = self._q
+        cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
+
+        self._pt = numpy.empty( (times.shape[0],q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
+        self.tmap = {} # TODO isn't dict to slow?
+        cdef int interval, cnt = 0
+
+        for i in range ( 1, times.shape[0] ):
+            #TODO double intervals
+            interval = times[i] - times[i-1]
+            if interval not in self.tmap:
+               #print( "int: ", interval)
+               #print(scipy.linalg.expm( q * interval ))
+
+               pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array
+               self._pt[cnt,:,:] = pt
+
+               self.tmap[ interval ] = cnt
+               cnt+= 1
+
+        #print("tmap")
+        #print(self.tmap)
+
+
+    #TODO pridaj ako test na prepare matrices
+    def zmaz_ma( self, times ):
+        self._prepare_matrices( times )
+        for i in range ( 1, times.shape[0] ):
+            interval = times[i] - times[i-1]
+            print("i:",interval)
+            print( numpy.asarray( self._pt[ self.tmap[ interval ] ]  ) )
+
+
+    cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+        """Method for the single call of forward algorithm"""
+        self._prepare_matrices( times )
+        return self._forward( times, emissions )
+
+
+    cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
            Return logaritmus of probabilities.
         """

@@ -15,6 +15,13 @@ def test_main():
     print(t)
     print(e)
 
+    #hmm.zmaz_ma( t )
+
+    hmm.forward( t, e )
+
+
+
+
 
     assert False
 
