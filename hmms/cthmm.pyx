@@ -2,13 +2,13 @@
 from hmms import hmm
 from hmms cimport hmm
 import numpy
+import scipy.linalg
 cimport numpy
 cimport cython
 
-
-cdef class HMM:
-    def __init__(self):
-       pass
+#cython: wraparound=False
+#cython: boundscheck=False
+#cython: nonecheck=False
 
 cdef class CtHMM(hmm.HMM):
 
@@ -19,21 +19,18 @@ cdef class CtHMM(hmm.HMM):
         """Make the CTHMM to continuosly meow"""
         print('meooooooow!')
 
-
-class Test2(hmm.Test):
-    def __init__(self):
-        pass
-
 def main():
     my_hmm = CtHMM()
     my_hmm.meow()
 
-    test = hmm.Test()
+    #import scipy.linalg
+    #scipy.linalg.expm(x)
+    #numpy.linalg.matrix_power(X,3)
 
-    print( hmm.foo(2) )
+
+    #print( hmm.foo(2) )
 
     print( type( hmm.HMM ) )
-    print( type( hmm.Test ) )
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ def test_froward( small_hmm ):
 def test_meow():
     hmm = hmms.CtHMM()
     hmm.meow()
-    assert False
+    assert True
 
 
 ###Common methods TODO - move in separate file

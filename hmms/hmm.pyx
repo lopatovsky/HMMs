@@ -14,11 +14,3 @@ cdef class HMM:
 
     def __init__(self):
         pass
-
-
-cdef int foo( int a ):
-    return 2*a
-
-class Test:
-    def __init__(self):
-        pass

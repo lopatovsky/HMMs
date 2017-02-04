@@ -12,6 +12,7 @@ setup(
     url='https://github.com/lopatovsky/CT-HMM',
     py_modules=['dthmm','cthmm','hmm'],
     ext_modules=cythonize('hmms/*.pyx', language_level=3, include_dirs=[numpy.get_include()]),
+    #TODO test: extra_compile_args=['-O3']
     include_dirs=[numpy.get_include()],
     install_requires=[
         'Cython',

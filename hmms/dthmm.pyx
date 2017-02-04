@@ -267,11 +267,6 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-
-    #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
-    #TODO2 - change default value to -1 - convergence
-    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
-
     def baum_welch_graph( self, data, iteration ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
@@ -282,6 +277,11 @@ cdef class DtHMM:
             graph[i] = self.data_estimate(data)
 
         return graph
+
+
+    #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
+    #TODO2 - change default value to -1 - convergence
+    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
 
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
