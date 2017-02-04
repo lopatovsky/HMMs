@@ -251,11 +251,14 @@ cdef class CtHMM(hmm.HMM):
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-
+    #TODO rename and change doc
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
+
+        self._prepare_matrices( times )
+
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
@@ -274,9 +277,9 @@ cdef class CtHMM(hmm.HMM):
             ksi_sum = numpy.full( ( s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
-            gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
+            #gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
-
+            gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
 
             for t , row in zip( times,data ):
@@ -287,30 +290,19 @@ cdef class CtHMM(hmm.HMM):
                 gamma = self.single_state_prob( alpha, beta )
                 ksi = self.double_state_prob( alpha, beta, t, row )
 
-                return
 
-                gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
                 #expected number of being in state i in time 0
                 for i in range( s_num ):
                     pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
 
-                #print("pi")
-                #print( numpy.exp(gamma[0,:]) )
-                #print( numpy.exp( pi_sum ) )
 
+                """not yet used"""
                 #expected number of transition from i to j
                 for i in range( s_num ):
                     for j in range( s_num ):
                         ksi_sum[i,j] = self.log_sum_elem( ksi_sum[i,j], self.log_sum( ksi[:,i,j] ) )
 
-                #expected number of transition from state i
-                for i in range( s_num ):
-                    gamma_sum[i] = self.log_sum( gamma[:-1,i] )
-
-                #sum gamma to the whole dataset array
-                for i in range ( s_num ):
-                    gamma_part_sum[i] = self.log_sum_elem( gamma_part_sum[i], gamma_sum[i] )
 
                 #expected number of visiting state i and observing symbol v
                 for t in range( row.shape[0] ):
@@ -318,8 +310,8 @@ cdef class CtHMM(hmm.HMM):
                         obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
 
                 #expected number of visiting state i
-                for i in range( s_num ):  #full length sum
-                    gamma_sum[i] = self.log_sum_elem( gamma_sum[i], gamma[-1,i]  )
+                for i in range( s_num ):
+                    gamma_sum[i] = self.log_sum( gamma[:,i] )
 
                 #sum gamma to the whole dataset array
                 for i in range ( s_num ):
@@ -329,8 +321,6 @@ cdef class CtHMM(hmm.HMM):
 
             #initial probabilities estimation
             self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
-            #transition matrix estimation
-            self._loga = (ksi_sum.T - gamma_part_sum).T
             #observetion symbol emission probabilities estimation
             self._logb = (obs_sum.T - gamma_full_sum).T
 

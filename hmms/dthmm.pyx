@@ -312,7 +312,7 @@ cdef class DtHMM:
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
-
+            gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
 
             for row in data:
@@ -323,7 +323,7 @@ cdef class DtHMM:
                 gamma = self.single_state_prob( alpha, beta )
                 ksi = self.double_state_prob( alpha, beta, row )
 
-                gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
+
 
                 #expected number of being in state i in time 0
                 for i in range( s_num ):
