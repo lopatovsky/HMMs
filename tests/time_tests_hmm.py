@@ -13,8 +13,6 @@ def get_random_data(  n, m, num, data_len ):
         _, e[i] = hmm.generate( data_len )
         print( e[i] )
 
-    print( hmm.pi )
-
     return e
 
 
@@ -25,8 +23,6 @@ def make_time_test( n, m, num, data_len, it_num ):
 
     data = get_random_data( n, m, num, data_len )
     hmm = hmms.DtHMM.random( n,m )
-
-    print( hmm.pi )
 
     start_time = time.time()
 
@@ -41,6 +37,7 @@ def main():
     random.seed(42)
 
     make_time_test( 10,10,50,50 ,10 )
+    make_time_test( 4,4,50,150  ,10 )
 
 
 

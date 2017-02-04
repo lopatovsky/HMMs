@@ -149,7 +149,7 @@ cdef class DtHMM:
         for i in range(1,size):
             for s in range(states_num):
 
-                alpha[i,s] = self.log_sum( alpha[i-1,:]+loga[:,s] )
+                alpha[i,s] = self.log_sum( alpha[i-1,:]+ loga[:,s] )
 
             #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]

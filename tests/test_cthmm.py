@@ -4,6 +4,23 @@ import numpy
 
 EPS = 1e-7
 
+
+
+def test_main():
+
+    hmm = hmms.CtHMM.random( 2,2 )
+    s,t,e = hmm.generate( 20 )
+    print( hmm.b  )
+    print(s)
+    print(t)
+    print(e)
+
+
+    assert False
+
+
+
+
 @pytest.fixture
 def small_hmm():
     """Create small DtHMM and basic emission sequence for testing of basic functionality"""
@@ -15,7 +32,7 @@ def small_hmm():
     emissions = numpy.array([0,1])
     return ( hmm, emissions )
 
-def test_froward( small_hmm ):
+def test_forward( small_hmm ):
     """Test forward algorithm"""
     hmm, em = small_hmm
 
@@ -25,7 +42,7 @@ def test_froward( small_hmm ):
     assert float_equal_mat( A, X )
 
 def test_meow():
-    hmm = hmms.CtHMM()
+    hmm = hmms.CtHMM.random(1,1)
     hmm.meow()
     assert True
 
