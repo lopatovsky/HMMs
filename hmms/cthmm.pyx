@@ -164,15 +164,15 @@ cdef class CtHMM(hmm.HMM):
         A[s_num:,s_num:] = self._q
 
         cdef i,j
-        cdef float_t [:,:] temp = numpy.empty( (s_num,s_num) , dtype=numpy.float64 )
+        cdef float_t [:,:] temp = numpy.empty( (2*s_num,2*s_num) , dtype=numpy.float64 )
 
-        self._n_exp = numpy.empty( (s_num, s_num, s_num, s_num) , dtype=numpy.float64 )
+        self._n_exp = numpy.empty( (s_num, s_num, 2*s_num, 2*s_num) , dtype=numpy.float64 )
 
         for i in range(s_num):
             for j in range( s_num ):
                 A[i,s_num + j] = 1  # set the subpart matrix B
 
-                temp = scipy.linalg.expm( A )[:s_num,s_num:]  #TODO copy directly in the 4D array?
+                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array?
                 self._n_exp[i,j,:,:] = temp
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
@@ -294,9 +294,9 @@ cdef class CtHMM(hmm.HMM):
         """
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, t, row, tau
-        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum, eta
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum, eta, tA
         cdef numpy.ndarray[float_t, ndim=3] ksi
-        cdef int i,j,tm,map_time
+        cdef int i,j,tm,map_time,ix
 
         #start_time = time.time()
         #...
@@ -357,7 +357,36 @@ cdef class CtHMM(hmm.HMM):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
 
 
-            tau, eta = self.end_state_expectations( ksi_sum )
+            #tau, eta = self.end_state_expectations( ksi_sum ) #TODO move all of these in separate function?
+            tau = numpy.zeros( (s_num), dtype=numpy.float64 )
+            eta = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
+
+            self._prepare_matrices_n_exp()
+
+            #self._n_exp[,,,]
+            #self._pt[,,]
+            #self._q[,]
+            #numpy.linalg.matrix_power(X,3)
+
+            for tm, ix in self.t_map.items():  #iterate trought all different time intervals
+
+                for i in range(s_num):
+                    for j in range( s_num ):
+
+                        tA  = numpy.linalg.matrix_power( A[i,j] , tm )[:s_num,s_num:]
+
+                        if i == j:
+
+                            tA /= self._pt[ ix ]
+                            #for k in range(s_num):
+                            #    for l in range(s_num):
+                            #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
+                            tau[i]  += numpy.sum(  ksi_sum[tm] * tA )
+
+                        else:
+                            tA *= self._q[i,j]
+                            tA /= self._pt[ ix ]
+                            eta[i,j] += numpy.sum(  ksi_sum[tm] * tA )
 
 
 
@@ -367,6 +396,10 @@ cdef class CtHMM(hmm.HMM):
             self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
             #observetion symbol emission probabilities estimation
             self._logb = (obs_sum.T - gamma_full_sum).T
+            #jump rates matrice
+            self._q = ( eta.T / tau ).T
+            for i in range( s_num ):
+                self_q[i,i] = - ( numpy.sum( self._q[:i] ) + numpy.sum( self._q[i+1:] )  )
 
             #print( numpy.exp( self._logpi ) )
             #print( numpy.exp( self._loga ) )
