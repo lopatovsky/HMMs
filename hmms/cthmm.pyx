@@ -380,12 +380,12 @@ cdef class CtHMM(hmm.HMM):
                             #for k in range(s_num):
                             #    for l in range(s_num):
                             #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
-                            tau[i]  += numpy.sum(  ksi_sum[ix] * tA )
+                            tau[i]  += self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() )  #tau is not in log prob anymore.
 
                         else:
                             tA *= self._q[i,j]
                             tA /= self._pt[ ix ]
-                            eta[i,j] += numpy.sum(  ksi_sum[ix] * tA )
+                            eta[i,j] += self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) #eta is not in log prob anymore.
 
 
 
@@ -397,12 +397,16 @@ cdef class CtHMM(hmm.HMM):
             self._logb = (obs_sum.T - gamma_full_sum).T
             #jump rates matrice
             self._q = ( eta.T / tau ).T
+            print(  self._q  )
+
             for i in range( s_num ):
+                print( "a",  self._q[i,:i] )
+                print( "b", self._q[i,i+1:] )
                 self._q[i,i] = - ( numpy.sum( self._q[i,:i] ) + numpy.sum( self._q[i,i+1:] )  )
 
-            print( numpy.exp( self._logpi ) )
-            print( numpy.exp( self._q ) )
-            print( numpy.exp( self._logb ) )
+            #print( numpy.exp( self._logpi ) )
+            print( self._q )
+            #print( numpy.exp( self._logb ) )
 
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
