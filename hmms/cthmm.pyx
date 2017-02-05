@@ -26,8 +26,11 @@ cdef class CtHMM(hmm.HMM):
 
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
+    cdef int time_n  #number of different time intervals
 
-
+    @property
+    def q(self):
+        return self._q
 
     @property
     def b(self):
@@ -136,11 +139,13 @@ cdef class CtHMM(hmm.HMM):
                    #print( "int: ", interval)
                    #print(scipy.linalg.expm( q * interval ))
 
-                   pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array
+                   pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array?
                    self._pt[cnt,:,:] = pt
 
                    self.tmap[ interval ] = cnt
                    cnt+= 1
+
+        self.time_n = cnt
 
         #print("tmap")
         #print(self.tmap)
@@ -259,9 +264,10 @@ cdef class CtHMM(hmm.HMM):
            Input array data is the numpy array of observation sequences.
         """
 
-        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, t, row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
+        cdef int i,j,tm,map_time
 
         #start_time = time.time()
         #...
@@ -274,17 +280,16 @@ cdef class CtHMM(hmm.HMM):
 
             #print("iter ", i)
 
-            ksi_sum = numpy.full( ( s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
+            ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             #gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
+            self._prepare_matrices( times )
 
             for t , row in zip( times,data ):
-
-                self._prepare_matrices( t )
 
                 alpha = self._forward ( t, row )
                 beta =  self._backward( t, row )
@@ -298,18 +303,21 @@ cdef class CtHMM(hmm.HMM):
                 for i in range( s_num ):
                     pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
 
+                #sum the ksi with same time interval together
+                for tm in range( row.shape[0] ):
 
-                """not yet used"""
-                #expected number of transition from i to j
-                for i in range( s_num ):
-                    for j in range( s_num ):
-                        ksi_sum[i,j] = self.log_sum_elem( ksi_sum[i,j], self.log_sum( ksi[:,i,j] ) )
+                    interval = t[tm+1]-t[tm-1]
+                    map_time = self.tmap[ interval ]
+
+                    for i in range(s_num):
+                        for j in range( s_num ):
+                            ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
 
 
                 #expected number of visiting state i and observing symbol v
-                for t in range( row.shape[0] ):
+                for tm in range( row.shape[0] ):
                     for i in range( s_num ):
-                        obs_sum[i,row[t]] = self.log_sum_elem( obs_sum[i,row[t]], gamma[t,i] )
+                        obs_sum[i,row[tm]] = self.log_sum_elem( obs_sum[i,row[tm]], gamma[tm,i] )
 
                 #expected number of visiting state i
                 for i in range( s_num ):
@@ -318,6 +326,12 @@ cdef class CtHMM(hmm.HMM):
                 #sum gamma to the whole dataset array
                 for i in range ( s_num ):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
+
+
+            ksi_sum
+
+
+
 
             #Update parameters:
 

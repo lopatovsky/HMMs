@@ -298,7 +298,7 @@ cdef class DtHMM:
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
-
+        cdef int i,j,t
 
 
         for i in range( iterations ):
