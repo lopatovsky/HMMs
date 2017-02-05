@@ -20,6 +20,20 @@ def test_main():
     #hmm.forward( t, e )
     #hmm.backward( t, e )
 
+    hmm2 = hmms.CtHMM.random( 2, 2 )
+
+
+    print( hmm.pi )
+    print( hmm.q )
+    print( hmm.b )
+    print("iter: 0")
+    print( hmm2.pi )
+    print( hmm2.q )
+    print( hmm2.b )
+
+
+    hmm2.baum_welch( numpy.array([t]),numpy.array([e]),10)
+
 
 
 

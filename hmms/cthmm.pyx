@@ -293,9 +293,10 @@ cdef class CtHMM(hmm.HMM):
            Input array data is the numpy array of observation sequences.
         """
 
-        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, t, row, tau
-        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum, eta, tA
-        cdef numpy.ndarray[float_t, ndim=3] ksi
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau
+        cdef numpy.ndarray[int_t, ndim=1] t, row
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA
+        cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
         cdef int i,j,tm,map_time,ix
 
         #start_time = time.time()
@@ -307,7 +308,9 @@ cdef class CtHMM(hmm.HMM):
 
         for i in range( iterations ):
 
-            #print("iter ", i)
+            print("iter ", i)
+
+            self._prepare_matrices_pt( times )
 
             ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0
@@ -316,7 +319,7 @@ cdef class CtHMM(hmm.HMM):
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
-            self._prepare_matrices_pt( times )
+
 
             for t , row in zip( times,data ):
 
@@ -333,13 +336,14 @@ cdef class CtHMM(hmm.HMM):
                     pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
 
                 #sum the ksi with same time interval together
-                for tm in range( row.shape[0] ):
+                for tm in range( t.shape[0] - 1 ):
 
-                    interval = t[tm+1]-t[tm-1]
+                    interval = t[tm+1]-t[tm]
                     map_time = self.tmap[ interval ]
 
                     for i in range(s_num):
                         for j in range( s_num ):
+
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
 
 
@@ -363,17 +367,12 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_n_exp()
 
-            #self._n_exp[,,,]
-            #self._pt[,,]
-            #self._q[,]
-            #numpy.linalg.matrix_power(X,3)
-
-            for tm, ix in self.t_map.items():  #iterate trought all different time intervals
+            for tm, ix in self.tmap.items():  #iterate trought all different time intervals
 
                 for i in range(s_num):
                     for j in range( s_num ):
 
-                        tA  = numpy.linalg.matrix_power( A[i,j] , tm )[:s_num,s_num:]
+                        tA  = numpy.linalg.matrix_power( self._n_exp[i,j] , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
 
                         if i == j:
 
@@ -381,12 +380,12 @@ cdef class CtHMM(hmm.HMM):
                             #for k in range(s_num):
                             #    for l in range(s_num):
                             #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
-                            tau[i]  += numpy.sum(  ksi_sum[tm] * tA )
+                            tau[i]  += numpy.sum(  ksi_sum[ix] * tA )
 
                         else:
                             tA *= self._q[i,j]
                             tA /= self._pt[ ix ]
-                            eta[i,j] += numpy.sum(  ksi_sum[tm] * tA )
+                            eta[i,j] += numpy.sum(  ksi_sum[ix] * tA )
 
 
 
@@ -399,11 +398,11 @@ cdef class CtHMM(hmm.HMM):
             #jump rates matrice
             self._q = ( eta.T / tau ).T
             for i in range( s_num ):
-                self_q[i,i] = - ( numpy.sum( self._q[:i] ) + numpy.sum( self._q[i+1:] )  )
+                self._q[i,i] = - ( numpy.sum( self._q[i,:i] ) + numpy.sum( self._q[i,i+1:] )  )
 
-            #print( numpy.exp( self._logpi ) )
-            #print( numpy.exp( self._loga ) )
-            #print( numpy.exp( self._logb ) )
+            print( numpy.exp( self._logpi ) )
+            print( numpy.exp( self._q ) )
+            print( numpy.exp( self._logb ) )
 
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
