@@ -431,8 +431,6 @@ cdef class CtHMM(hmm.HMM):
         else    : max_p = y
         return max_p + numpy.log( numpy.exp( x - max_p ) + numpy.exp( y - max_p ) )
 
-
-
     def meow(self):
         """Make the CTHMM to continuosly meow"""
         print('meooooooow!')
