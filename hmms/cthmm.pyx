@@ -23,6 +23,7 @@ cdef class CtHMM(hmm.HMM):
 
     cdef dict tmap
     cdef float_t [:,:,:] _pt
+    cdef float_t [:,:,:,:] _n_exp
 
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
@@ -121,7 +122,7 @@ cdef class CtHMM(hmm.HMM):
 
 
     #TODO implement variant for square and multiplay
-    cdef _prepare_matrices( self, numpy.ndarray[int_t, ndim=2] times ):
+    cdef _prepare_matrices_pt( self, numpy.ndarray[int_t, ndim=2] times ):
         """Will pre-count exponencials of matrices for all different time intervals"""
 
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
@@ -150,24 +151,52 @@ cdef class CtHMM(hmm.HMM):
         #print("tmap")
         #print(self.tmap)
 
+    cdef _prepare_matrices_n_exp( self ):
+        """Will pre-count integrals $\int_0^t( e^{Qx}_{k,i} e^{Q(t-x)}_{j,l} dx$ for any states $i,j,k,l \in$ hidden states """
+
+        cdef int s_num = self._q.shape[0]
+
+        #Construct auxiliary matrix A = [[Q,B][0,Q]]
+
+        cdef numpy.ndarray[float_t, ndim=2] A = numpy.zeros(  ( 2*s_num, 2*s_num ), dtype=numpy.float64  )
+
+        A[:s_num,:s_num] = self._q
+        A[s_num:,s_num:] = self._q
+
+        cdef i,j
+        cdef float_t [:,:] temp = numpy.empty( (s_num,s_num) , dtype=numpy.float64 )
+
+        self._n_exp = numpy.empty( (s_num, s_num, s_num, s_num) , dtype=numpy.float64 )
+
+        for i in range(s_num):
+            for j in range( s_num ):
+                A[i,s_num + j] = 1  # set the subpart matrix B
+
+                temp = scipy.linalg.expm( A )[:s_num,s_num:]  #TODO copy directly in the 4D array?
+                self._n_exp[i,j,:,:] = temp
+
+                A[i,s_num + j] = 0  # zero the subpart matrix B
+
 
     #TODO pridaj ako test na prepare matrices
     def zmaz_ma( self, times ):
-        self._prepare_matrices( times )
+        self._prepare_matrices_pt( numpy.array( [times] ) )
         for i in range ( 1, times.shape[0] ):
             interval = times[i] - times[i-1]
             print("i:",interval)
             print( numpy.asarray( self._pt[ self.tmap[ interval ] ]  ) )
 
+        self._prepare_matrices_n_exp()
+
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
-        self._prepare_matrices( numpy.array( [times] ) )
+        self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
     cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of backward algorithm"""
-        self._prepare_matrices( numpy.array( [times] ) )
+        self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._backward( times, emissions )
 
 
@@ -264,8 +293,8 @@ cdef class CtHMM(hmm.HMM):
            Input array data is the numpy array of observation sequences.
         """
 
-        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, t, row
-        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, t, row, tau
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum, eta
         cdef numpy.ndarray[float_t, ndim=3] ksi
         cdef int i,j,tm,map_time
 
@@ -287,7 +316,7 @@ cdef class CtHMM(hmm.HMM):
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
-            self._prepare_matrices( times )
+            self._prepare_matrices_pt( times )
 
             for t , row in zip( times,data ):
 
@@ -328,8 +357,7 @@ cdef class CtHMM(hmm.HMM):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
 
 
-            ksi_sum
-
+            tau, eta = self.end_state_expectations( ksi_sum )
 
 
 
@@ -343,6 +371,11 @@ cdef class CtHMM(hmm.HMM):
             #print( numpy.exp( self._logpi ) )
             #print( numpy.exp( self._loga ) )
             #print( numpy.exp( self._logb ) )
+
+
+    #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
+        #self._prepare_matrices_n_exp()
+
 
 
 

@@ -15,10 +15,10 @@ def test_main():
     print(t)
     print(e)
 
-    #hmm.zmaz_ma( t )
+    hmm.zmaz_ma( t )
 
-    hmm.forward( t, e )
-    hmm.backward( t, e )
+    #hmm.forward( t, e )
+    #hmm.backward( t, e )
 
 
 
