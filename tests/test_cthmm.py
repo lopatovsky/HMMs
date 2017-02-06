@@ -32,6 +32,8 @@ def test_discrete_compare( dthmm ):
 
     compare_parameters_no_sort( dt,  hmms.DtHMM( *get_dthmm_params(ct) ) )
 
+    print("A",dt.a)
+
     dt.baum_welch(e,1)
     ct.baum_welch(t,e, 1)
 

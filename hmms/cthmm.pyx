@@ -213,15 +213,19 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
 
+        print("FORWARD")
+        print("should be 0:",self.tmap[ 1 ])
+        print( numpy.asarray( self._pt[ self.tmap[ 1 ],:,:]  ) )
+        print("FORWARD")
+
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
 
             interval = times[i] - times[i-1]
-
             for s in range(states_num):
 
                 alpha[i,s] = self.log_sum( alpha[i-1,:]
-                                         + numpy.exp( numpy.asarray( self._pt[ self.tmap[ interval ],:,s]  ) ) ) #TODO probably can be optimised omitting exp
+                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) ) #TODO probably can be optimised omitting exp
 
             #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
@@ -247,7 +251,7 @@ cdef class CtHMM(hmm.HMM):
 
             for s in range(states_num):
                 beta[i,s] = self.log_sum( beta[i+1,:] + logb[:, int(emissions[i+1]) ]
-                          + numpy.exp( numpy.asarray( self._pt[ self.tmap[ interval ],s,:]  ) ) )
+                          + numpy.log(  self._pt[ self.tmap[ interval ],s,:]   ) )
 
         return beta
 
