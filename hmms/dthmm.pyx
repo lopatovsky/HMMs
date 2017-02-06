@@ -229,6 +229,9 @@ cdef class DtHMM:
         max_p = vec[0]                  #
         for i in range(1,vec.shape[0]):   #
             if max_p < vec[i] : max_p = vec[i] #
+
+        if numpy.isinf( max_p ): return max_p  #to avoid nan in (inf-inf)
+
         return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
 
     cpdef float_t log_sum_elem(self, float_t x, float_t y ):
@@ -236,6 +239,9 @@ cdef class DtHMM:
         cdef float_t max_p
         if x > y: max_p = x
         else    : max_p = y
+
+        if numpy.isinf( max_p ): return max_p  #to avoid nan in (inf-inf)
+
         return max_p + numpy.log( numpy.exp( x - max_p ) + numpy.exp( y - max_p ) )
 
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):

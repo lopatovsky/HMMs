@@ -30,6 +30,10 @@ cdef class CtHMM(hmm.HMM):
     cdef int time_n  #number of different time intervals
 
     @property
+    def time_n(self):
+        return self.time_n
+
+    @property
     def q(self):
         return self._q
 
@@ -139,6 +143,8 @@ cdef class CtHMM(hmm.HMM):
                 if interval not in self.tmap:
                    #print( "int: ", interval)
                    #print(scipy.linalg.expm( q * interval ))
+                   print("int", interval)
+                   print("Q", q)
 
                    pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array?
                    self._pt[cnt,:,:] = pt
@@ -370,11 +376,14 @@ cdef class CtHMM(hmm.HMM):
                     interval = t[tm+1]-t[tm]
                     map_time = self.tmap[ interval ]
 
+                    print("interval", interval)
+
                     for i in range(s_num):
                         for j in range( s_num ):
 
+                            print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
-
+                            print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
 
                 #print("C ksi", ksi_sum[0] )
 
@@ -405,14 +414,17 @@ cdef class CtHMM(hmm.HMM):
 
             for tm, ix in self.tmap.items():  #iterate trought all different time intervals
 
-                #print("tm ix", tm, ix)
+                print("tm ix", tm, ix)
 
                 for i in range(s_num):
                     for j in range( s_num ):
 
                         tA  = numpy.linalg.matrix_power( self._n_exp[i,j] , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
 
-                        print(tA)
+                        print("ta",tA)
+                        print("ksi", ksi_sum[ix] )
+                        print("log", numpy.log( tA ) )
+                        print("pt",numpy.asarray(self._pt[ ix ]))
 
                         if i == j:
 
@@ -420,15 +432,22 @@ cdef class CtHMM(hmm.HMM):
                             #for k in range(s_num):
                             #    for l in range(s_num):
                             #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
+
+                            print("sum",self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ))
+
                             tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #tau is not in log prob anymore.
 
-                            print(tau[i])
+                            #print(tau[i])
 
                         else:
                             tA *= self._q[i,j]
                             tA /= self._pt[ ix ]
                             eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ) #eta is not in log prob anymore.
 
+
+
+            print("tau\n",tau)
+            print("eta\n",eta)
 
 
             #Update parameters:
@@ -439,16 +458,16 @@ cdef class CtHMM(hmm.HMM):
             self._logb = (obs_sum.T - gamma_full_sum).T
             #jump rates matrice
             self._q = ( eta.T / tau ).T
-            print(  self._q  )
+            #print(  self._q  )
 
             for i in range( s_num ):
 
                 self._q[i,i] = - numpy.sum( self._q[i,:] )
 
             #print( numpy.exp( self._logpi ) )
-            print( self._q )
-            print( "CT-HMM qt, t = 1s  like A" )
-            print( scipy.linalg.expm( self._q ) )
+            #print( self._q )
+            #print( "CT-HMM qt, t = 1s  like A" )
+            #print( scipy.linalg.expm( self._q ) )
             #print( numpy.exp( self._logb ) )
 
 
@@ -465,6 +484,9 @@ cdef class CtHMM(hmm.HMM):
         max_p = vec[0]                  #
         for i in range(1,vec.shape[0]):   #
             if max_p < vec[i] : max_p = vec[i] #
+
+        if numpy.isinf( max_p ): return max_p  #to avoid nan in (inf-inf)
+
         return max_p + numpy.log( numpy.sum( numpy.exp( vec - max_p ) ) )
 
     cpdef float_t log_sum_elem(self, float_t x, float_t y ):
@@ -472,6 +494,9 @@ cdef class CtHMM(hmm.HMM):
         cdef float_t max_p
         if x > y: max_p = x
         else    : max_p = y
+
+        if numpy.isinf( max_p ): return max_p  #to avoid nan in (inf-inf)
+
         return max_p + numpy.log( numpy.exp( x - max_p ) + numpy.exp( y - max_p ) )
 
     def meow(self):

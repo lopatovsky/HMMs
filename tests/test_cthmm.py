@@ -5,8 +5,6 @@ import scipy.linalg
 
 EPS = 1e-7
 
-
-
 @pytest.fixture
 def cthmm():
     """Parameters for cthmm of 3 hidden states and 3  output variables"""
@@ -21,33 +19,49 @@ def dthmm( cthmm ):
     return hmms.DtHMM( *get_dthmm_params(cthmm) )
 
 
-
-# TODO parametrize number of seq, ..
-def test_discrete_compare( dthmm ):
-    """Test will run EM algorithms for parameter estimation, determinically with the same initialization on both models"""
-    t, e = create_data( dthmm, (50,50) )
+def test_compare_state_probs_with_discrete( dthmm ):
+    """Test will run algorithms for counting state probability, determinically with the same initialization for both models"""
+    t, e = create_data( dthmm, (1,100) )
 
     ct = hmms.CtHMM.random(3,3)
     dt = hmms.DtHMM( *get_dthmm_params(ct) )
 
-    compare_parameters_no_sort( dt,  hmms.DtHMM( *get_dthmm_params(ct) ) )
+    assert compare_parameters_no_sort( dt,  hmms.DtHMM( *get_dthmm_params(ct) ) )
 
-    print("A",dt.a)
-    print("Q",ct.q)
+    row = e[0]
+    trow = t[0]
 
-    dt.baum_welch(e,1)
-    ct.baum_welch(t,e, 1)
+    #ct
+    alpha = ct.forward ( trow, row )
+    beta =  ct.backward( trow, row )
+    gamma = ct.single_state_prob( alpha, beta )
+    ksi = ct.double_state_prob( alpha, beta, trow, row )
+    #dt
+    d_alpha = dt.forward ( row )
+    d_beta =  dt.backward( row )
+    d_gamma = dt.single_state_prob( d_alpha, d_beta )
+    d_ksi = dt.double_state_prob( d_alpha, d_beta, row )
 
-    print("dt-matrices")
-    print("ct-matrices")
+    assert float_equal_mat( gamma, d_gamma  )
+    assert float_equal_mat( ksi[0], d_ksi  )
+
+@pytest.fixture
+def vi_data( ):
+    """return training data of various time intervals"""
+    e = numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ])
+    t = numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]) #tree various time intervals
+    return (t,e)
 
 
-    assert compare_parameters_no_sort( dt,  hmms.DtHMM( *get_dthmm_params(ct) )   )
+def test_time_intervals_mapping( vi_data, cthmm ):
+    """test if the time interval methods compress needed intervals correctly"""
+    cthmm.baum_welch( vi_data[0], vi_data[1] , 5)
+
+    assert cthmm.time_n == 3
 
 
 
-
-def DEPtest_main():
+def DEPRECIATEDtest_main():
 
     hmm = hmms.CtHMM.random( 2,2 )
     s,t,e = hmm.generate( 20 )
