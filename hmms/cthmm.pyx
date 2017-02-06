@@ -47,6 +47,7 @@ cdef class CtHMM(hmm.HMM):
 
     def __init__(self, Q,B,Pi):
         """Initialize the DtHMM by given parameters."""
+        numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( Q,B,Pi )
 
     def set_params( self, Q, B, Pi):
@@ -473,9 +474,6 @@ cdef class CtHMM(hmm.HMM):
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
         #self._prepare_matrices_n_exp()
-
-
-
 
     cpdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
         """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""

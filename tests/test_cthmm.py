@@ -45,20 +45,41 @@ def test_compare_state_probs_with_discrete( dthmm ):
     assert float_equal_mat( gamma, d_gamma  )
     assert float_equal_mat( ksi[0], d_ksi  )
 
+"""
 @pytest.fixture
 def vi_data( ):
-    """return training data of various time intervals"""
     e = numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ])
     t = numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]) #tree various time intervals
     return (t,e)
+"""
 
+@pytest.mark.parametrize("t,e,num", [
+    (numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]),
+     numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ]),
+     3
+    ),
+    (numpy.array([ [0,1,8,16,19,29],[0,2,60,77,120,133],[0,50,61,70,77,79] ]),
+     numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ]),
+     13
+    ),
+    (numpy.array([ [0,1,8,16,19,29],[0,2,60,77,120,133],[0,50,61,70,77,79] ]),
+     numpy.array([ [0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0] ]),
+     13
+    ),
+    (numpy.array([ [0,1,8,16,19,29],[0,2,60,77,120,133],[0,50,61,70,77,79] ]),
+     numpy.array([ [1,1,1,1,1,0],[1,1,0,0,0,0],[1,1,0,0,0,0] ]),   #impossibility of init model
+     13
+    )
 
-def test_time_intervals_mapping( vi_data, cthmm ):
-    """test if the time interval methods compress needed intervals correctly"""
-    cthmm.baum_welch( vi_data[0], vi_data[1] , 5)
+])
+def test_time_intervals_mapping( t,e,num, cthmm ):
+    """test if the time intervals compress to uniq intervals correctly.
+    Training data of various time intervals.
+    Data are created in the way so it encompass zero probability -> -inf logprobability.
+    """
+    cthmm.baum_welch( t, e , 3)
 
-    assert cthmm.time_n == 3
-
+    assert cthmm.time_n == num
 
 
 def DEPRECIATEDtest_main():

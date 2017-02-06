@@ -37,6 +37,7 @@ cdef class DtHMM:
 
     def __init__(self, A,B,Pi):
         """Initialize the DtHMM by given parameters."""
+        numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( A,B,Pi )
 
     @classmethod
