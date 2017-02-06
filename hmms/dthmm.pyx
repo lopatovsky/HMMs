@@ -341,7 +341,7 @@ cdef class DtHMM:
                         ksi_sum[i,j] = self.log_sum_elem( ksi_sum[i,j], self.log_sum( ksi[:,i,j] ) )
 
 
-                print("D ksi", ksi_sum )
+                #print("D ksi", ksi_sum )
 
 
                 #expected number of transition from state i

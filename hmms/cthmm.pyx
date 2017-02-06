@@ -214,10 +214,10 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
 
-        print("FORWARD")
-        print("should be 0:",self.tmap[ 1 ])
-        print( numpy.asarray( self._pt[ self.tmap[ 1 ],:,:]  ) )
-        print("FORWARD")
+        #print("FORWARD")
+        #print("should be 0:",self.tmap[ 1 ])
+        #print( numpy.asarray( self._pt[ self.tmap[ 1 ],:,:]  ) )
+        #print("FORWARD")
 
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
@@ -292,6 +292,30 @@ cdef class CtHMM(hmm.HMM):
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
+    cpdef emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
+        """From given emission sequence calculate the likelihood estimation given model parameters"""
+        return  self.log_sum( self.forward( times,emissions )[-1,:] )
+
+    cpdef data_estimate( self, numpy.ndarray[int_t, ndim=2] times ,numpy.ndarray[int_t, ndim=2] data ):
+        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
+        cdef float sm = 0
+        for t,row in zip( times, data):
+            sm += self.emission_estimate( t,row )
+        return sm
+
+    #TODO move to the small artificial class in art.py
+    def baum_welch_graph( self, times, data, iteration ):
+        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
+        graph = numpy.empty(iteration+1)
+        graph[0] = self.data_estimate( times, data)
+
+        for i in range(1,iteration+1):
+            self.baum_welch( times, data, 1 )
+            graph[i] = self.data_estimate(times, data)
+
+        return graph
+
+
     #TODO rename and change doc
     cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
@@ -352,7 +376,7 @@ cdef class CtHMM(hmm.HMM):
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
 
 
-                print("C ksi", ksi_sum[0] )
+                #print("C ksi", ksi_sum[0] )
 
                 #expected number of visiting state i and observing symbol v
                 for tm in range( row.shape[0] ):
@@ -374,14 +398,14 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_n_exp()
 
-            print("EXP 0,2 - 1-1")
-            print( numpy.asarray( self._n_exp[0,2] ) )
-            print( numpy.asarray( self._n_exp[1,1] ) )
-            print("EXP")
+            #print("EXP 0,2 - 1-1")
+            #print( numpy.asarray( self._n_exp[0,2] ) )
+            #print( numpy.asarray( self._n_exp[1,1] ) )
+            #print("EXP")
 
             for tm, ix in self.tmap.items():  #iterate trought all different time intervals
 
-                print("tm ix", tm, ix)
+                #print("tm ix", tm, ix)
 
                 for i in range(s_num):
                     for j in range( s_num ):
@@ -423,6 +447,8 @@ cdef class CtHMM(hmm.HMM):
 
             #print( numpy.exp( self._logpi ) )
             print( self._q )
+            print( "CT-HMM qt, t = 1s  like A" )
+            print( scipy.linalg.expm( self._q ) )
             #print( numpy.exp( self._logb ) )
 
 

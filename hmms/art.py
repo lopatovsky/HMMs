@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+import scipy.linalg
 #TODO rename to numpy
 
 import pandas as pd
@@ -10,8 +11,17 @@ def print_parameters( hmm ):
 
     print("Initial probabilities (π) :")
     display( pd.DataFrame(hmm.pi) )
-    print("Transition probabilities matrix (A):")
-    display( pd.DataFrame(hmm.a) )
+
+    if hasattr(hmm, 'a'):
+        print("Transition probabilities matrix (A):")
+        display( pd.DataFrame(hmm.a) )
+
+    else:
+        print("Transition rate matrix (Q):")
+        display( pd.DataFrame(hmm.q) )
+        print("Transition probabilities for one time unit :")
+        display( pd.DataFrame(  scipy.linalg.expm(hmm.q) ) )
+
     print("Emission probabilities matrix (B):")
     display( pd.DataFrame(hmm.b) )
 

@@ -25,7 +25,7 @@ def dthmm( cthmm ):
 # TODO parametrize number of seq, ..
 def test_discrete_compare( dthmm ):
     """Test will run EM algorithms for parameter estimation, determinically with the same initialization on both models"""
-    t, e = create_data( dthmm, (1,20) )
+    t, e = create_data( dthmm, (50,50) )
 
     ct = hmms.CtHMM.random(3,3)
     dt = hmms.DtHMM( *get_dthmm_params(ct) )
