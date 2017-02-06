@@ -282,7 +282,7 @@ cdef class CtHMM(hmm.HMM):
             for i in range( ksi.shape[1]):
                 for j in range( ksi.shape[2]):
                     ksi[t,i,j] = alpha[t,i]                                              \
-                               + numpy.exp( self._pt[ self.tmap[ interval ],i,j] )       \
+                               + numpy.log( self._pt[ self.tmap[ interval ],i,j] )       \
                                + logb[j, emissions[t+1] ] + beta[t+1,j]
 
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
@@ -350,6 +350,8 @@ cdef class CtHMM(hmm.HMM):
 
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
 
+
+                print("C ksi", ksi_sum[0] )
 
                 #expected number of visiting state i and observing symbol v
                 for tm in range( row.shape[0] ):

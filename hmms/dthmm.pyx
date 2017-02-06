@@ -340,6 +340,10 @@ cdef class DtHMM:
                     for j in range( s_num ):
                         ksi_sum[i,j] = self.log_sum_elem( ksi_sum[i,j], self.log_sum( ksi[:,i,j] ) )
 
+
+                print("D ksi", ksi_sum )
+
+
                 #expected number of transition from state i
                 for i in range( s_num ):
                     gamma_sum[i] = self.log_sum( gamma[:-1,i] )
