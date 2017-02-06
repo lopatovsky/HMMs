@@ -172,7 +172,8 @@ cdef class CtHMM(hmm.HMM):
             for j in range( s_num ):
                 A[i,s_num + j] = 1  # set the subpart matrix B
 
-                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array?
+                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
+
                 self._n_exp[i,j,:,:] = temp
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
@@ -373,12 +374,21 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_n_exp()
 
+            print("EXP 0,2 - 1-1")
+            print( numpy.asarray( self._n_exp[0,2] ) )
+            print( numpy.asarray( self._n_exp[1,1] ) )
+            print("EXP")
+
             for tm, ix in self.tmap.items():  #iterate trought all different time intervals
+
+                print("tm ix", tm, ix)
 
                 for i in range(s_num):
                     for j in range( s_num ):
 
                         tA  = numpy.linalg.matrix_power( self._n_exp[i,j] , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+
+                        print(tA)
 
                         if i == j:
 
@@ -386,12 +396,14 @@ cdef class CtHMM(hmm.HMM):
                             #for k in range(s_num):
                             #    for l in range(s_num):
                             #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
-                            tau[i]  += self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() )  #tau is not in log prob anymore.
+                            tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #tau is not in log prob anymore.
+
+                            print(tau[i])
 
                         else:
                             tA *= self._q[i,j]
                             tA /= self._pt[ ix ]
-                            eta[i,j] += self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) #eta is not in log prob anymore.
+                            eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ) #eta is not in log prob anymore.
 
 
 
@@ -406,9 +418,8 @@ cdef class CtHMM(hmm.HMM):
             print(  self._q  )
 
             for i in range( s_num ):
-                print( "a",  self._q[i,:i] )
-                print( "b", self._q[i,i+1:] )
-                self._q[i,i] = - ( numpy.sum( self._q[i,:i] ) + numpy.sum( self._q[i,i+1:] )  )
+
+                self._q[i,i] = - numpy.sum( self._q[i,:] )
 
             #print( numpy.exp( self._logpi ) )
             print( self._q )
