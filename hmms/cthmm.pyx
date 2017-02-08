@@ -87,7 +87,7 @@ cdef class CtHMM(hmm.HMM):
             q[i,i+1:] = vec[i:]
             q[i,i] = -1*numpy.sum(vec)
 
-        for i in range( o ):
+        for i in range( s ):
             b[i,:] = CtHMM.get_random_vector(o)
         pi = CtHMM.get_random_vector(s)
 
