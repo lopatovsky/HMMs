@@ -303,7 +303,7 @@ cdef class CtHMM(hmm.HMM):
         return sm
 
     #TODO move to the small artificial class in art.py
-    def baum_welch_graph( self, times, data, iteration ):
+    def baum_welch_graph( self, times, data, iteration =10 ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
         graph[0] = self.data_estimate( times, data)
@@ -417,14 +417,14 @@ cdef class CtHMM(hmm.HMM):
 
             for tm, ix in self.tmap.items():  #iterate trought all different time intervals
 
-                print("tm ix", tm, ix)
+                #print("tm ix", tm, ix)
 
                 for i in range(s_num):
                     for j in range( s_num ):
 
-                        if i==0 and j==0:
-                            print(i,j, numpy.asarray(self._n_exp[i,j]))
-                            print("t1",temp)
+#                        if i==0 and j==0:
+#                            print(i,j, numpy.asarray(self._n_exp[i,j]))
+#                            print("t1",temp)
 
                         ##doesn't work - > temp = numpy.asarray(self._n_exp[i,j,:,:])
                         for k in range(s_num*2):
@@ -435,13 +435,14 @@ cdef class CtHMM(hmm.HMM):
                         #temp = numpy.full( (s_num*2,s_num*2), 4.25 )
 
                         #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
+
                         tA  = numpy.linalg.matrix_power( temp , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
 
-                        if i==0 and j==0:
-                            #temp[2,4] = 5
-                            print(i,j, numpy.asarray(self._n_exp[i,j]))
-                            print("d",temp)
-                            print("dA",tA)
+#                        if i==0 and j==0:
+#                            #tA[0,0] = 5
+#                            print(i,j, numpy.asarray(self._n_exp[i,j]))
+#                            print("d",temp)
+#                            print("dA",tA)
 
 
                         #print("ta",tA)
@@ -451,28 +452,7 @@ cdef class CtHMM(hmm.HMM):
 
                         if i == j:
 
-                           ## print("proto-ta", tA)
-                           ## print( "norm", numpy.asarray(self._pt[ ix ]) )
-
-
-                            if i==0 and j==0:
-                                print("baby",i,j, numpy.asarray(self._n_exp[i,j]))
-
-
                             tA /= self._pt[ ix ]
-                            #for k in range(s_num):
-                            #    for l in range(s_num):
-                            #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
-
-
-                            if i==0 and j==0:
-                                print("x",i,j, numpy.asarray(self._n_exp[i,j]))
-
-                            #print("sum",self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ))
-                           ## print("add",numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ))
-                           ## print("add2", numpy.sum( numpy.exp(ksi_sum[ix]) *  tA   ) )
-                           ## print("ta",tA   )
-                           ## print("ksi", numpy.exp(ksi_sum[ix]) )
 
                             tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #tau is not in log prob anymore.
 

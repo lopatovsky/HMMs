@@ -276,7 +276,7 @@ cdef class DtHMM:
 
 
     #TODO move to the small artificial class in art.py
-    def baum_welch_graph( self, data, iteration ):
+    def baum_welch_graph( self, data, iteration =10 ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
         graph[0] = self.data_estimate(data)
