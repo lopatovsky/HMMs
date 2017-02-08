@@ -120,7 +120,7 @@ cdef class CtHMM(hmm.HMM):
 
 
     def generate(self, size ):
-        """Randomly generate a sequence of states and emissions from model parameters."""
+        """Randomly generate a sequence of states, times and emissions from model parameters."""
         q = numpy.array( self._q )
         pt = numpy.empty( q.shape )
 
@@ -152,6 +152,21 @@ cdef class CtHMM(hmm.HMM):
             current_state = numpy.random.choice( qt.shape[1],1, p = qt[ current_state,:].flatten() )
 
         return ( states, times, emissions )
+
+    def generate_data( self, size , **kargs):
+        """Generate multiple sequences of times and emissions from model parameters
+           size = ( number of sequences, length of sequences  )
+           **kargs:  states=True : return also sequence of states
+        """
+        e = numpy.empty( size, dtype=int )
+        t = numpy.empty( size, dtype=int )
+        s = numpy.empty( size, dtype=int )
+        for i in range( size[0] ):
+            s[i],t[i],e[i] = self.generate( size[1] )
+        if ('states' in kargs) and kargs['states'] == True:
+            return(t,s,e)
+
+        return (t,e)
 
 
     #TODO implement variant for square and multiplay

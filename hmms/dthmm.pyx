@@ -117,6 +117,23 @@ cdef class DtHMM:
             current_state = numpy.random.choice( a.shape[1],1, p = a[ current_state,:].flatten() )
         return ( states, emissions )
 
+    def generate_data(self, size, **kargs ):
+        """Generate multiple sequences of states and emissions from model parameters
+           size = ( number of sequences, length of sequences  )
+           **kargs:  times=True : return also equidistant sequence of times
+        """
+        e = numpy.empty( size, dtype=int )
+        t = numpy.empty( size, dtype=int )
+        s = numpy.empty( size, dtype=int )
+        for i in range( size[0] ):
+            s[i],e[i] = self.generate( size[1] )
+            t[i] = numpy.arange(  size[1] )
+
+        if ('times' in kargs) and kargs['times'] == True:
+            return(t,s,e)
+
+        return (s,e)
+
     #cpdef estimate(self, states, emissions):
     #    """From given state and emission sequence calculate their likelihood estimation given model parameters"""
     #
