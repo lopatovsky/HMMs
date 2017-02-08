@@ -54,6 +54,21 @@ cdef class CtHMM(hmm.HMM):
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( Q,B,Pi )
 
+    @classmethod
+    def from_file( cls, path ):
+        """Initialize the class by reading parameters from file"""
+        return cls( *CtHMM.get_params_from_file(path) )
+
+    @staticmethod
+    def get_params_from_file( path ):
+        """Get parameters by reading them from .npz file"""
+        npz = numpy.load( path )
+        return ( npz['q'], npz['b'], npz['pi'] )
+
+    def save_params( self, path ):
+        """Save parameters in the file given by 'path'"""
+        numpy.savez( path, q=self.q, b=self.b, pi=self.pi )
+
     def set_params( self, Q, B, Pi):
         """Set parameters as their logs to avoid underflow"""
         self._q = Q
@@ -64,6 +79,15 @@ cdef class CtHMM(hmm.HMM):
     def random( cls, s, o ):
         """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
         return cls( *CtHMM.get_random_params( s, o ) )
+
+    def set_params_random( self, s, o ):
+        """Set parameters by random. Size of 's' hidden states and 'o' output variables"""
+        self.set_params( *CtHMM.get_random_params( s, o ) )
+
+    def set_params_from_file( self, path ):
+        """Set parameters by reading them from file"""
+        self.set_params( *CtHMM.get_params_from_file(path) )
+
 
     @staticmethod
     def get_random_vector( s ):
