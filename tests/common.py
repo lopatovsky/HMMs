@@ -8,7 +8,11 @@ def compare_parameters_no_sort( m1, m2, eps = EPS ):
     """Compare whole hmm parameters"""
 
     #Notice: sort_rows is needed, because any permutation of hidden states is acceptable
-    ok  = float_equal_mat( m1.a,  m2.a, eps )
+    if hasattr(m1, 'a'):
+        ok  = float_equal_mat( m1.a,  m2.a, eps )
+    else:
+        ok  = float_equal_mat( m1.q,  m2.q, eps )
+
     ok &= float_equal_mat( m1.b,  m2.b, eps )
     ok &= float_equal_mat( m1.pi, m2.pi,eps )
 

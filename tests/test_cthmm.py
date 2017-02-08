@@ -45,14 +45,6 @@ def test_compare_state_probs_with_discrete( dthmm ):
     assert float_equal_mat( gamma, d_gamma  )
     assert float_equal_mat( ksi[0], d_ksi  )
 
-"""
-@pytest.fixture
-def vi_data( ):
-    e = numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ])
-    t = numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]) #tree various time intervals
-    return (t,e)
-"""
-
 @pytest.mark.parametrize("t,e,num", [
     (numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]),
      numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ]),
@@ -81,6 +73,57 @@ def test_time_intervals_mapping( t,e,num, cthmm ):
 
     assert cthmm.time_n == num
 
+@pytest.fixture
+def train_data():
+    data = ( numpy.array([ [ 0,  1,  2,  3,  6,  8, 13, 14, 15, 16],
+                           [ 0,  1,  2,  3,  5,  8, 10, 14, 17, 20],
+                           [ 0,  6,  9, 14, 17, 21, 22, 25, 29, 30],
+                           [ 0,  1,  2,  5,  8, 10, 11, 14, 16, 17],
+                           [ 0,  1,  3,  5,  7,  9, 12, 15, 16, 22 ] ] ),
+             numpy.array([ [0, 0, 0, 0, 2, 1, 1, 1, 2, 0],
+                           [0, 0, 0, 1, 0, 0, 0, 0, 0, 2],
+                           [0, 0, 1, 0, 2, 0, 0, 2, 2, 2],
+                           [0, 0, 0, 2, 1, 2, 2, 2, 2, 0],
+                           [2, 0, 0, 2, 0, 2, 2, 0, 0, 0] ] )
+           )
+    return data
+
+@pytest.fixture
+def out_params():
+    """Parameters obtained from cthmm after train at """
+    Q = numpy.array( [[-0.343587,0.104953,0.238635],
+	                  [0.242387,-0.520299,0.277912],
+                      [0.243836,0.120222,-0.364058]] )
+    B = numpy.array( [[0.800786,0.039352,0.159862],
+                      [0.056306,0.925069,0.018625],
+                      [0.177688,0.059007,0.763306]] )
+    Pi = numpy.array( [0.893435,0.000000,0.106565] )
+    return hmms.CtHMM(Q,B,Pi)
+
+
+#TODO parametricky test nato ci klesa estimation v baumwelchu
+
+
+def test_baum_welch( train_data, cthmm, out_params ):
+    """This is just the consistency test, do not ensure right computations"""
+    t,e = train_data
+
+
+    print("estimation:",cthmm.data_estimate(t,e) )
+
+    print(t)
+    print(e)
+
+    cthmm.baum_welch( t,e,20 )
+
+    print(cthmm.q)
+
+    print("estimation:",cthmm.data_estimate(t,e) )
+
+    assert compare_parameters_no_sort( out_params,  cthmm )
+
+
+
 
 def get_dthmm_params( cthmm ):
     """given the cthmm get parameters for dthmm"""
@@ -103,3 +146,13 @@ def create_data( dthmm, size ):
         t[i] = numpy.arange(  size[1] )
 
     return (t,e)
+
+#TODO pridaj ako test na prepare matrices
+#    def zmaz_ma( self, times ):
+#        self._prepare_matrices_pt( numpy.array( [times] ) )
+#        for i in range ( 1, times.shape[0] ):
+#            interval = times[i] - times[i-1]
+#            print("i:",interval)
+#            print( numpy.asarray( self._pt[ self.tmap[ interval ] ]  ) )
+#
+#        self._prepare_matrices_n_exp()

@@ -45,6 +45,10 @@ cdef class CtHMM(hmm.HMM):
     def pi(self):
         return numpy.exp( self._logpi )
 
+    @property
+    def params( self ):
+        return( self.q, self.b, self.pi )
+
     def __init__(self, Q,B,Pi):
         """Initialize the DtHMM by given parameters."""
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
@@ -144,8 +148,8 @@ cdef class CtHMM(hmm.HMM):
                 if interval not in self.tmap:
                    #print( "int: ", interval)
                    #print(scipy.linalg.expm( q * interval ))
-                   print("int", interval)
-                   print("Q", q)
+                   #print("int", interval)
+                   #print("Q", q)
 
                    pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array?
                    self._pt[cnt,:,:] = pt
@@ -184,18 +188,6 @@ cdef class CtHMM(hmm.HMM):
                 self._n_exp[i,j,:,:] = temp
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
-
-
-    #TODO pridaj ako test na prepare matrices
-    def zmaz_ma( self, times ):
-        self._prepare_matrices_pt( numpy.array( [times] ) )
-        for i in range ( 1, times.shape[0] ):
-            interval = times[i] - times[i-1]
-            print("i:",interval)
-            print( numpy.asarray( self._pt[ self.tmap[ interval ] ]  ) )
-
-        self._prepare_matrices_n_exp()
-
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
@@ -331,7 +323,7 @@ cdef class CtHMM(hmm.HMM):
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau
         cdef numpy.ndarray[int_t, ndim=1] t, row
-        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA
+        cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
         cdef int i,j,tm,map_time,ix
 
@@ -366,6 +358,8 @@ cdef class CtHMM(hmm.HMM):
                 ksi = self.double_state_prob( alpha, beta, t, row )
                 #TODO sum probs for same delta(t).
 
+                #print("ksi",ksi)
+
 
                 #expected number of being in state i in time 0
                 for i in range( s_num ):
@@ -377,14 +371,16 @@ cdef class CtHMM(hmm.HMM):
                     interval = t[tm+1]-t[tm]
                     map_time = self.tmap[ interval ]
 
-                    print("interval", interval)
+                    #print("interval", interval)
 
                     for i in range(s_num):
                         for j in range( s_num ):
 
-                            print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
+                            #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
-                            print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
+                            #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
+
+                #print("ksisum",ksi_sum)
 
                 #print("C ksi", ksi_sum[0] )
 
@@ -406,7 +402,13 @@ cdef class CtHMM(hmm.HMM):
             tau = numpy.zeros( (s_num), dtype=numpy.float64 )
             eta = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
 
+            tA = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
+
+            temp = numpy.zeros( (s_num*2,s_num*2), dtype=numpy.float64 )
+
             self._prepare_matrices_n_exp()
+
+            print(numpy.asarray(self._n_exp[0,0]))
 
             #print("EXP 0,2 - 1-1")
             #print( numpy.asarray( self._n_exp[0,2] ) )
@@ -420,21 +422,47 @@ cdef class CtHMM(hmm.HMM):
                 for i in range(s_num):
                     for j in range( s_num ):
 
-                        tA  = numpy.linalg.matrix_power( self._n_exp[i,j] , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+                        if i==0 and j==0:
+                            print(i,j, numpy.asarray(self._n_exp[i,j]))
+                            print("t1",temp)
 
-                        print("ta",tA)
-                        print("ksi", ksi_sum[ix] )
-                        print("log", numpy.log( tA ) )
-                        print("pt",numpy.asarray(self._pt[ ix ]))
+                        temp = numpy.asarray(self._n_exp[i,j])
+
+                        tA  = numpy.linalg.matrix_power( temp , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+
+                        if i==0 and j==0:
+                            print(i,j, numpy.asarray(self._n_exp[i,j]))
+                            print("t2",temp)
+
+                        #print("ta",tA)
+                        #print("ksi", ksi_sum[ix] )
+                        #print("log", numpy.log( tA ) )
+                        #print("pt",numpy.asarray(self._pt[ ix ]))
 
                         if i == j:
+
+                           ## print("proto-ta", tA)
+                           ## print( "norm", numpy.asarray(self._pt[ ix ]) )
+
+
+                            if i==0 and j==0:
+                                print("baby",i,j, numpy.asarray(self._n_exp[i,j]))
+
 
                             tA /= self._pt[ ix ]
                             #for k in range(s_num):
                             #    for l in range(s_num):
                             #        tau[i] += ksi_sum[tm,k,l] * tA[k,l]
 
-                            print("sum",self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ))
+
+                            if i==0 and j==0:
+                                print("x",i,j, numpy.asarray(self._n_exp[i,j]))
+
+                            #print("sum",self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ))
+                           ## print("add",numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ))
+                           ## print("add2", numpy.sum( numpy.exp(ksi_sum[ix]) *  tA   ) )
+                           ## print("ta",tA   )
+                           ## print("ksi", numpy.exp(ksi_sum[ix]) )
 
                             tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #tau is not in log prob anymore.
 
@@ -445,10 +473,11 @@ cdef class CtHMM(hmm.HMM):
                             tA /= self._pt[ ix ]
                             eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ) #eta is not in log prob anymore.
 
+                print("tau\n",tau)
 
 
             print("tau\n",tau)
-            print("eta\n",eta)
+            #print("eta\n",eta)
 
 
             #Update parameters:
