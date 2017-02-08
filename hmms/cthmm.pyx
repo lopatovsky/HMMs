@@ -126,7 +126,7 @@ cdef class CtHMM(hmm.HMM):
 
 
 
-    def generate(self, size ):
+    def generate(self, size, exp=0.5 ):
         """Randomly generate a sequence of states, times and emissions from model parameters."""
         q = numpy.array( self._q )
         pt = numpy.empty( q.shape )
@@ -147,7 +147,7 @@ cdef class CtHMM(hmm.HMM):
             emissions[i] =  numpy.random.choice( b.shape[1],1, p = b[ current_state,:].flatten() )
 
             #observation times will have exponential distances.
-            time_interval = int( random.expovariate(0.5) ) + 1
+            time_interval = int( random.expovariate( exp ) ) + 1
             current_time += time_interval
 
             #print( time_interval )
@@ -158,9 +158,10 @@ cdef class CtHMM(hmm.HMM):
 
             current_state = numpy.random.choice( qt.shape[1],1, p = qt[ current_state,:].flatten() )
 
-        return ( states, times, emissions )
+        return ( times, states, emissions )
 
-    def generate_data( self, size , **kargs):
+    #TODO exp param
+    def generate_data( self, size, **kargs ):
         """Generate multiple sequences of times and emissions from model parameters
            size = ( number of sequences, length of sequences  )
            **kargs:  states=True : return also sequence of states
@@ -169,7 +170,7 @@ cdef class CtHMM(hmm.HMM):
         t = numpy.empty( size, dtype=int )
         s = numpy.empty( size, dtype=int )
         for i in range( size[0] ):
-            s[i],t[i],e[i] = self.generate( size[1] )
+            t[i],s[i],e[i] = self.generate( size[1] )
         if ('states' in kargs) and kargs['states'] == True:
             return(t,s,e)
 
