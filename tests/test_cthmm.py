@@ -16,7 +16,7 @@ def cthmm():
 @pytest.fixture
 def dthmm( cthmm ):
     """The discrete model, created so it behaves identical to the given continuous."""
-    return hmms.DtHMM( *get_dthmm_params(cthmm) )
+    return hmms.DtHMM( *cthmm.get_dthmm_params() )
 
 @pytest.mark.parametrize(
     ['data_num', 'data_len'],
@@ -30,9 +30,9 @@ def test_compare_state_probs_with_discrete( data_num, data_len,dthmm ):
     t,_,e = dthmm.generate_data( (data_num,data_len), times=True )
 
     ct = hmms.CtHMM.random(3,3)
-    dt = hmms.DtHMM( *get_dthmm_params(ct) )
+    dt = hmms.DtHMM( *ct.get_dthmm_params() )
 
-    assert compare_parameters_no_sort( dt,  hmms.DtHMM( *get_dthmm_params(ct) ) )
+    assert compare_parameters_no_sort( dt,  hmms.DtHMM( *ct.get_dthmm_params() ) )
 
     row = e[0]
     trow = t[0]
@@ -135,29 +135,10 @@ def test_baum_welch( train_data, cthmm, out_params ):
     """This is just the consistency test, do not ensure right computations"""
     t,e = train_data
 
-
-    print("estimation:",cthmm.data_estimate(t,e) )
-
-    print(t)
-    print(e)
-
     cthmm.baum_welch( t,e,20 )
-
-    print(cthmm.q)
-
-    print("estimation:",cthmm.data_estimate(t,e) )
 
     assert compare_parameters_no_sort( out_params,  cthmm, 1e-5 )
 
-
-
-
-def get_dthmm_params( cthmm ):
-    """given the cthmm get parameters for dthmm"""
-    A = scipy.linalg.expm( cthmm.q )  #the transition rate is set as the one time unit probabilities of continuos model
-    B = cthmm.b
-    Pi = cthmm.pi
-    return (A,B,Pi)
 
 
 

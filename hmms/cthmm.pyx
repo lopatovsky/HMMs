@@ -75,6 +75,13 @@ cdef class CtHMM(hmm.HMM):
         self._logb = numpy.log(B)
         self._logpi = numpy.log(Pi)
 
+    def get_dthmm_params( self, time_step = 1 ):
+        """Transform the jump rate matrix to transition matrix for discrete time of length time_step"""
+        A = scipy.linalg.expm( self.q * time_step )  #the transition rate is set as the one time unit probabilities of continuos model
+        B = self.b
+        Pi = self.pi
+        return (A,B,Pi)
+
     @classmethod
     def random( cls, s, o ):
         """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
