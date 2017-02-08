@@ -325,7 +325,7 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[int_t, ndim=1] t, row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
-        cdef int i,j,tm,map_time,ix
+        cdef int i,j,k,l,tm,map_time,ix
 
         #start_time = time.time()
         #...
@@ -404,7 +404,7 @@ cdef class CtHMM(hmm.HMM):
 
             tA = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
 
-            temp = numpy.zeros( (s_num*2,s_num*2), dtype=numpy.float64 )
+            temp = numpy.empty( (s_num*2,s_num*2), dtype=numpy.float64 )
 
             self._prepare_matrices_n_exp()
 
@@ -426,13 +426,23 @@ cdef class CtHMM(hmm.HMM):
                             print(i,j, numpy.asarray(self._n_exp[i,j]))
                             print("t1",temp)
 
-                        temp = numpy.asarray(self._n_exp[i,j])
+                        ##doesn't work - > temp = numpy.asarray(self._n_exp[i,j,:,:])
+                        for k in range(s_num*2):
+                            for l in range(s_num*2):
+                                temp[k,l] = self._n_exp[i,j,k,l]
 
+
+                        #temp = numpy.full( (s_num*2,s_num*2), 4.25 )
+
+                        #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
                         tA  = numpy.linalg.matrix_power( temp , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
 
                         if i==0 and j==0:
+                            #temp[2,4] = 5
                             print(i,j, numpy.asarray(self._n_exp[i,j]))
-                            print("t2",temp)
+                            print("d",temp)
+                            print("dA",tA)
+
 
                         #print("ta",tA)
                         #print("ksi", ksi_sum[ix] )
