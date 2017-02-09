@@ -291,8 +291,8 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-
-    #TODO move to the small artificial class in art.py
+    #TODO - merge the estimation counting with the forward alg and baum welch procedure.
+    #TODO move to the small artificial class in art.py - nope
     def baum_welch_graph( self, data, iteration =10 ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
