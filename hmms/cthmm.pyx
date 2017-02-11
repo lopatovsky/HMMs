@@ -350,20 +350,42 @@ cdef class CtHMM(hmm.HMM):
         return sm
 
     #TODO move to the small artificial class in art.py
-    def baum_welch_graph( self, times, data, iteration =10 ):
+    def baum_welch_graph( self, times, data, iteration =10  ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
         graph[0] = self.data_estimate( times, data)
 
         for i in range(1,iteration+1):
-            self.baum_welch( times, data, 1 )
+            self._baum_welch( times, data, 0,1 )
             graph[i] = self.data_estimate(times, data)
 
         return graph
 
+    def baum_welch_graph2( self, times, data, iteration =10  ):
+        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
+        graph = numpy.empty(iteration+1)
+        graph[0] = self.data_estimate( times, data)
+
+        for i in range(1,iteration+1):
+            self._baum_welch( times, data, 1,1 )
+            graph[i] = self.data_estimate(times, data)
+
+        return graph
+
+    def baum_welch( self, times, data, iteration = 10, **kvargs ):
+
+        if 'method' in kvargs:
+            if kvargs['method'] == 'lr':
+                self._baum_welch( times, data, 1, iteration )
+                return
+
+
+        self._baum_welch( times, data, 0, iteration )
+
+
 
     #TODO rename and change doc
-    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
+    cdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int method , int iterations):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
@@ -497,18 +519,37 @@ cdef class CtHMM(hmm.HMM):
                         #print("log", numpy.log( tA ) )
                         #print("pt",numpy.asarray(self._pt[ ix ]))
 
-                        if i == j:
 
-                            tA /= self._pt[ ix ]
 
-                            tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #tau is not in log prob anymore.
+                        if method == 0 :
 
-                            #print(tau[i])
+                            if i == j:
 
-                        else:
-                            tA *= self._q[i,j]
-                            tA /= self._pt[ ix ]
-                            eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) ) #eta is not in log prob anymore.
+                                tA /= self._pt[ ix ]
+
+                                tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )   #tau is not in log prob anymore.
+
+                                #print(tau[i])
+
+                            else:
+                                tA *= self._q[i,j]
+                                tA /= self._pt[ ix ]
+                                eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #eta is not in log prob anymore.
+
+                        if method == 1:
+
+                            if i == j:
+
+                                tA /= self._pt[ ix ]
+
+                                tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) - numpy.log(tm) )   #tau is not in log prob anymore.
+
+                                #print(tau[i])
+
+                            else:
+                                tA *= self._q[i,j]
+                                tA /= self._pt[ ix ]
+                                eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) - numpy.log(tm) )  #eta is not in log prob anymore.
 
                 print("tau\n",tau)
 
@@ -516,26 +557,39 @@ cdef class CtHMM(hmm.HMM):
             print("tau\n",tau)
             #print("eta\n",eta)
 
-
             #Update parameters:
+            if method == 0 or method == 1:
+                #initial probabilities estimation
+                self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
+                #observetion symbol emission probabilities estimation
+                self._logb = (obs_sum.T - gamma_full_sum).T
+                #jump rates matrice
+                self._q = ( eta.T / tau ).T
+                #print(  self._q  )
+                for i in range( s_num ):
+                    self._q[i,i] = - numpy.sum( self._q[i,:] )
 
-            #initial probabilities estimation
-            self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
-            #observetion symbol emission probabilities estimation
-            self._logb = (obs_sum.T - gamma_full_sum).T
-            #jump rates matrice
-            self._q = ( eta.T / tau ).T
-            #print(  self._q  )
+                #print( numpy.exp( self._logpi ) )
+                #print( self._q )
+                #print( "CT-HMM qt, t = 1s  like A" )
+                #print( scipy.linalg.expm( self._q ) )
+                #print( numpy.exp( self._logb ) )
+#
+#            if method == 1:
+#
+#                lr = 0.5
+#
+#                #initial probabilities estimation
+#                self._logpi = lr + self._logpi ,  (1.0-lr) +(  pi_sum - numpy.log( data.shape[0] )  ) #average
+#                #observetion symbol emission probabilities estimation
+#                self._logb = lr + self._logpi ,  (1.0-lr) +(  (obs_sum.T - gamma_full_sum).T )
+#                #jump rates matrice
+#                self._q = lr * self._logpi +  (1.0-lr) *(  ( eta.T / tau ).T )
+#                #print(  self._q  )
+#                for i in range( s_num ):
+#                    self._q[i,i] = - numpy.sum( self._q[i,:] )
 
-            for i in range( s_num ):
 
-                self._q[i,i] = - numpy.sum( self._q[i,:] )
-
-            #print( numpy.exp( self._logpi ) )
-            #print( self._q )
-            #print( "CT-HMM qt, t = 1s  like A" )
-            #print( scipy.linalg.expm( self._q ) )
-            #print( numpy.exp( self._logb ) )
 
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
