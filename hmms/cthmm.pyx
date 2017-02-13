@@ -624,14 +624,6 @@ cdef class CtHMM(hmm.HMM):
 def main():
     my_hmm = CtHMM()
     my_hmm.meow()
-
-    #import scipy.linalg
-    #scipy.linalg.expm(x)
-    #numpy.linalg.matrix_power(X,3)
-
-
-    #print( hmm.foo(2) )
-
     print( type( hmm.HMM ) )
 
 

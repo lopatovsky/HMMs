@@ -1,2 +1,3 @@
 develop build: python setup.py develop  
 run __main__.py: python -m hmms
+Test: PYTHONPATH=. python -m pytest tests/test_hmm.py

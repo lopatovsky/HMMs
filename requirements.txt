@@ -1,1 +1,45 @@
-will be added soon...
+bleach==1.5.0
+-e git+git@github.com:lopatovsky/CT-HMM.git@39879e12de6a11dccb85860b147fe3a6f1747232#egg=cthmm
+cycler==0.10.0
+Cython==0.25.2
+decorator==4.0.11
+entrypoints==0.2.2
+-e git+git@github.com:lopatovsky/CT-HMM.git@39879e12de6a11dccb85860b147fe3a6f1747232#egg=hmms
+html5lib==0.9999999
+ipykernel==4.5.2
+ipython==5.2.0
+ipython-genutils==0.1.0
+Jinja2==2.9.5
+jsonschema==2.5.1
+jupyter-client==4.4.0
+jupyter-core==4.2.1
+MarkupSafe==0.23
+matplotlib==2.0.0
+-e git+git@github.com:lopatovsky/CT-HMM.git@39879e12de6a11dccb85860b147fe3a6f1747232#egg=maze
+mistune==0.7.3
+nbconvert==5.1.1
+nbformat==4.2.0
+notebook==4.3.1
+numpy==1.12.0
+pandas==0.19.2
+pandocfilters==1.4.1
+pexpect==4.2.1
+pickleshare==0.7.4
+pkg-resources==0.0.0
+prompt-toolkit==1.0.9
+ptyprocess==0.5.1
+py==1.4.32
+Pygments==2.2.0
+pyparsing==2.1.10
+pytest==3.0.6
+python-dateutil==2.6.0
+pytz==2016.10
+pyzmq==16.0.2
+scipy==0.18.1
+simplegeneric==0.8.1
+six==1.10.0
+terminado==0.6
+testpath==0.3
+tornado==4.4.2
+traitlets==4.3.1
+wcwidth==0.1.7
