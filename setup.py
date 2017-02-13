@@ -1,3 +1,4 @@
+import glob
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
 import numpy
@@ -9,7 +10,7 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='0.1.0.0',
+    version='0.1.1.7',
     description='DT-HMM and CT-HMM library',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
@@ -18,8 +19,7 @@ setup(
     url='https://github.com/lopatovsky/CT-HMM',
     packages=find_packages(),
     zip_safe=False,
-    ext_modules=cythonize('hmms/*.pyx', language_level=3, include_dirs=[numpy.get_include()]),
-    #extra_compile_args=['-O3'],
+    ext_modules=cythonize(glob.glob('hmms/*.pyx'), language_level=3, include_dirs=[numpy.get_include()]),
     include_dirs=[numpy.get_include()],
     install_requires=[
         'Cython',
@@ -42,6 +42,6 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         ],
-    setup_requires=['pytest-runner',],
+    setup_requires=['pytest-runner'],
     tests_require=['pytest',],
 )
