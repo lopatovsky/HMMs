@@ -33,7 +33,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: Public Domain',
-        'Operating System :: POSIX :: Linux',
         'Programming Language :: Cython',
         'Programming Language :: Python',
         'Programming Language :: Python :: Implementation :: CPython',

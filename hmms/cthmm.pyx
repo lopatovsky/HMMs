@@ -405,7 +405,7 @@ cdef class CtHMM(hmm.HMM):
 
         for i in range( iterations ):
 
-            print("iter ", i)
+            ##print("iter ", i)
 
             self._prepare_matrices_pt( times )
 
@@ -477,7 +477,7 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_n_exp()
 
-            print(numpy.asarray(self._n_exp[0,0]))
+            ##print(numpy.asarray(self._n_exp[0,0]))
 
             #print("EXP 0,2 - 1-1")
             #print( numpy.asarray( self._n_exp[0,2] ) )
@@ -551,10 +551,10 @@ cdef class CtHMM(hmm.HMM):
                                 tA /= self._pt[ ix ]
                                 eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) - numpy.log(tm) )  #eta is not in log prob anymore.
 
-                print("tau\n",tau)
+                ##print("tau\n",tau)
 
 
-            print("tau\n",tau)
+            ##print("tau\n",tau)
             #print("eta\n",eta)
 
             #Update parameters:
