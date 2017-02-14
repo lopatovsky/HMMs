@@ -1,5 +1,4 @@
-.. greattwitterwall documentation master file, created by
-   sphinx-quickstart on Wed Nov  2 13:52:08 2016.
+.. HMMs's documentation master file.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -14,6 +13,11 @@ Contents:
    :maxdepth: 2
       
    intro
+   hmms.dthmm
+   hmms.cthmm
+   :ref:`api-secret-key`
+   hmms.cthmm module
+   
    Dt-HMM
    Ct-HMM
 
