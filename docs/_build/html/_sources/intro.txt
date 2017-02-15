@@ -38,6 +38,6 @@ Download & Install
 
 You can install the package directly from test pypi by command:
 
-``$ python -m pip install --extra-index-url https://testpypi.python.org/pypi hmms``
+``$ python -m pip install --extra-index-url https://testpypi.python.org/pypi greattwitterwall``
 
 
