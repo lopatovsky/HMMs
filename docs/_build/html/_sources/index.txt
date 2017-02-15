@@ -13,14 +13,7 @@ Contents:
    :maxdepth: 2
       
    intro
-   hmms.dthmm
-   hmms.cthmm
-   :ref:`api-secret-key`
-   hmms.cthmm module
    
-   Dt-HMM
-   Ct-HMM
-
 .. automodule:: hmms
    :members:
 

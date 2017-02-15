@@ -10,7 +10,7 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='0.1.1.7',
+    version='0.1.1.8',
     description='DT-HMM and CT-HMM library',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
