@@ -1,95 +1,45 @@
 Intro
 =======
 
-The Greattwitterwall is the Twitter based application, that anable the search
-of the key-words in most recent tweets.
+HMMs is the **Hidden Markov Models library** for *Python*. 
+It is easy to use **general purpose** library, implementing all the important submethods, what you can need for the training, examining and experimenting with the data models.
 
-The project rised as the part of the homework serie for MI-PYT at FIT CTU in Prague.
+The effectivness of the computationally expensive parts is powered by *Cython*.
 
-The Program operates in two modes:
+You can build two models:
 
--  The Console Application:
+**Discrete-time Hidden Markov Model** 
+  
+  Usually just reffered as the Hidden Markov Model.
 
-Anable to search for the tweets, refreshing in the realtime, when new tweet with the searching keyword arise.  
+**Continuous-time Hidden Markov Model** 
+  
+  The variant of the Hidden Markov Model, where the state transition can occure in the continuous time, and that allows random distribution  of the observation times.
 
--  The Web Application:  
+For the **fast** understanding of the models theory read the `Simple guide to HMMs <https://example.com/#TODO>`__,
 
-Use the web frontend to format searched tweets in more readible way.
+Before starting to work, it is recommended to go trough **tutorial with examples** `the ipython notebook <https://github.com/lopatovsky/CT-HMM/blob/master/CT-HMM.ipynb>`__, covering most of the main usecases.
 
--  Sources:
-   `Testpypi <https://testpypi.python.org/pypi?%3Aaction=pkg_edit&name=greattwitterwall>`__,
-   `Github <https://github.com/lopatovsky/greattwitterwall>`__,
-   `Read The Docs <https://readthedocs.org/projects/greattwitterwall/>`__.
+For **deeper understanding** of the topic you can see the corresponding `diploma thesis <https://github.com/lopatovsky/DP>`__.
+Or read the main referenced articles: `Dt-HMM <http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf>`__, `Ct-HMM <https://web.engr.oregonstate.edu/~lif/nips2015_CTHMM_learning_camera_ready.pdf>`__
 
-If you only want to use it for searching tweets or see its functionality, you can find it `here <http://jamaisvu.pythonanywhere.com/MI-PYT/>`__. 
-
-Feel free to mend the url in any form to search for desired key-words.
-
-``http://jamaisvu.pythonanywhere.com/{searched word}/`` 
+-  Sources of the project:
+   `Testpypi <https://testpypi.python.org/pypi?%3Aaction=pkg_edit&name=hmms>`__,
+   `Github <https://github.com/lopatovsky/CT-HMM>`__,
+   `Read The Docs <https://example.com/#TODO>`__.
 
 Requirements
 ~~~~~~~~~~~~
 
 -  python 3.5
--  libraries: `click <http://click.pocoo.org/6/>`__,
-   `flask <http://flask.pocoo.org/>`__,
-   `requests <http://docs.python-requests.org/en/master/>`__,
-   `jinja2 <http://jinja.pocoo.org/docs/dev/>`__,   
-
-
-.. _api-secret-key:
+-  libraries: Cython, ipython, matplotlib, notebook, numpy, pandas, scipy,
+-  libraries for testing environment: pytest   
 
 Download & Install
 ~~~~~~~~~~~~~~~~~~
 
 You can install the package directly from test pypi by command:
 
-``$ python -m pip install --extra-index-url https://testpypi.python.org/pypi greattwitterwall``
-
-Or download at `Github <https://github.com/lopatovsky/greattwitterwall>`__ and install from source:
-
-``$ python setup.py install``
-
-To succesfully run the program, you need to create the file "auth.cfg" in the main directory in the form ::
-
-   [twitter]
-   key = XXXX
-   secret = YYYY
-
-You can get twitter key and secret by registering the app `here <https://apps.twitter.com/>`__.
-
-Usage
-~~~~~
-
-You may launch the console or web application by command: 
-
-``$ greattwitterwall console``
-
-``$ greattwitterwall web``
-
-Then just follow the prompt questions or
-use the ``--help`` option to get more information.
-
-delete me ref :ref:`api-secret-key`
-
-Examples
-~~~~~~~~
-
-.. testsetup::
-
-   import greattwitterwall as gtw
-
-.. doctest::
-
-   >>> gtw.suma(5,6)
-   11
-   
-   >>> gtw.suma(-4,3)
-   -1
-
-
-Other examples may be added in future.
-
-
+``$ python -m pip install --extra-index-url https://testpypi.python.org/pypi hmms``
 
 

@@ -260,11 +260,6 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
 
-        #print("FORWARD")
-        #print("should be 0:",self.tmap[ 1 ])
-        #print( numpy.asarray( self._pt[ self.tmap[ 1 ],:,:]  ) )
-        #print("FORWARD")
-
         alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
         for i in range(1,size):
 
@@ -272,7 +267,7 @@ cdef class CtHMM(hmm.HMM):
             for s in range(states_num):
 
                 alpha[i,s] = self.log_sum( alpha[i-1,:]
-                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) ) #TODO probably can be optimised omitting exp
+                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) )
 
             #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
@@ -301,6 +296,62 @@ cdef class CtHMM(hmm.HMM):
                           + numpy.log(  self._pt[ self.tmap[ interval ],s,:]   ) )
 
         return beta
+
+
+    cpdef viterbi(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
+        """From given emission sequence and parameters calculate the most likely state sequence"""
+
+        cdef numpy.ndarray[float_t, ndim=2] loga = self._q
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num, interval
+        cdef float_t max_p, temp
+
+        self._prepare_matrices_pt( numpy.array( [times] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
+
+        size = emissions.shape[0]
+        states_num = self._q.shape[0]
+        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
+
+
+        delta[0,:] = logpi + logb[:, int(emissions[0]) ]
+        psi[0,:] = 0
+        for i in range(1,size):
+
+            interval = times[i] - times[i-1]
+
+            for s in range(states_num):
+
+                delta[i,s] = delta[i-1,0] + numpy.log( self._pt[ self.tmap[ interval ],0,s]  )
+                psi[i,s] = 0
+
+                for r in range(1,states_num):
+                    temp = delta[i-1,r] + numpy.log( self._pt[ self.tmap[ interval ],r,s]  )
+                    if delta[i,s] < temp:
+                        delta[i,s] = temp
+                        psi[i,s] = r
+
+                delta[i,s] += logb[s,emissions[i]]
+
+        max_p = delta[-1,0]
+
+        p = 0
+
+        for s in range(1,states_num):
+            if max_p < delta[-1,s]:
+                max_p = delta[-1,s]
+                p = s
+
+        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=numpy.int )
+
+        for i in range(size-1,-1,-1):
+            path[i] = p
+            p = psi[i,p]
+
+        return ( max_p, path )
+
+
 
     cpdef numpy.ndarray[float_t, ndim=2] single_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha, numpy.ndarray[float_t, ndim=2] beta ):
         """Given forward and backward variables, count the probability for any state in any time"""
