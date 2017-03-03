@@ -1,1 +1,1 @@
-/home/jamaisvu/Desktop/CT-HMM/README
+/home/jamaisvu/Desktop/HMMs/README
