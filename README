@@ -18,7 +18,7 @@ You can build two models:
 
 For the **fast** understanding of the models theory read the [Simple guide to HMMs](https://example.com/#TODO),
 
-Before starting to work, it is recommended to go trough **tutorial with examples** [the ipython notebook](https://github.com/lopatovsky/CT-HMM/blob/master/CT-HMM.ipynb), covering most of the main usecases.
+Before starting to work, it is recommended to go trough **tutorial with examples**, [the ipython notebook](https://github.com/lopatovsky/CT-HMM/blob/master/CT-HMM.ipynb), covering most of the main usecases.
 
 For **deeper understanding** of the topic you can see the corresponding [diploma thesis] (https://github.com/lopatovsky/DP>).
 Or read the main referenced articles: [Dt-HMM](http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf>), [Ct-HMM] (https://web.engr.oregonstate.edu/~lif/nips2015_CTHMM_learning_camera_ready.pdf) .
