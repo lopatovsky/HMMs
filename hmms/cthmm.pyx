@@ -87,6 +87,11 @@ cdef class CtHMM(hmm.HMM):
         """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
         return cls( *CtHMM.get_random_params( s, o ) )
 
+    @classmethod
+    def random_exp( cls, s, o ): #todo docs, join together with random and add parameter exp or norm
+        """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
+        return cls( *CtHMM.get_random_params_exp( s, o ) )
+
     def set_params_random( self, s, o ):
         """Set parameters by random. Size of 's' hidden states and 'o' output variables"""
         self.set_params( *CtHMM.get_random_params( s, o ) )
@@ -100,6 +105,12 @@ cdef class CtHMM(hmm.HMM):
     def get_random_vector( s ):
         """Generate random vector of size (s), with all values summing to one"""
         vec = numpy.random.random(s)
+        return vec / numpy.sum(vec)
+
+    @staticmethod
+    def get_random_vector_exp( s ):
+        """Generate random vector of size (s), with all values summing to one"""
+        vec = numpy.random.exponential(1,s)
         return vec / numpy.sum(vec)
 
     @staticmethod
@@ -121,6 +132,28 @@ cdef class CtHMM(hmm.HMM):
         for i in range( s ):
             b[i,:] = CtHMM.get_random_vector(o)
         pi = CtHMM.get_random_vector(s)
+
+        return(q,b,pi)
+
+    @staticmethod
+    def get_random_params_exp( s, o ):
+        """Generate random parameters A,B and Pi, for number of hidden states (s) and output variables (o)"""
+
+        q = numpy.empty( [s,s] )
+        b = numpy.empty( [s,o] )
+        pi = numpy.empty( s )
+
+        for i in range( s ):
+
+            ##TODO - do we want for ij i!= j sum to 1?
+            vec = CtHMM.get_random_vector_exp(s-1)
+            q[i,:i] = vec[:i]
+            q[i,i+1:] = vec[i:]
+            q[i,i] = -1*numpy.sum(vec)
+
+        for i in range( s ):
+            b[i,:] = CtHMM.get_random_vector_exp(o)
+        pi = CtHMM.get_random_vector_exp(s)
 
         return(q,b,pi)
 
@@ -400,7 +433,18 @@ cdef class CtHMM(hmm.HMM):
             sm += self.emission_estimate( t,row )
         return sm
 
-    #TODO move to the small artificial class in art.py
+
+    def multi_baum_welch( self, runs, times, data, iteration = 10 ):
+        """Return all convergences in the array"""
+        graph = numpy.empty( (runs,iteration+1) )
+
+        for i in range( runs ):
+            print(i)
+            graph[i] = self.baum_welch_graph( times, data, iteration )
+
+        return graph
+
+
     def baum_welch_graph( self, times, data, iteration =10  ):
         """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
         graph = numpy.empty(iteration+1)
