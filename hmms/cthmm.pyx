@@ -210,7 +210,7 @@ cdef class CtHMM(hmm.HMM):
         return (t,e)
 
 
-    #TODO implement variant for square and multiplay
+    #TODO implement variant for square and multiply
     cdef _prepare_matrices_pt( self, numpy.ndarray[int_t, ndim=2] times ):
         """Will pre-count exponencials of matrices for all different time intervals"""
 
@@ -422,74 +422,69 @@ cdef class CtHMM(hmm.HMM):
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-    cpdef emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
+    cpdef float_t emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
+        #print("alpha", self.forward( times,emissions )[-1,:])
+
+        #print("1", self.log_sum( self.forward( times,emissions )[-1,:] ) )
+
         return  self.log_sum( self.forward( times,emissions )[-1,:] )
 
-    cpdef data_estimate( self, numpy.ndarray[int_t, ndim=2] times ,numpy.ndarray[int_t, ndim=2] data ):
+    cpdef float_t data_estimate( self, numpy.ndarray[int_t, ndim=2] times ,numpy.ndarray[int_t, ndim=2] data ):
         """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
-        cdef float sm = 0
+        cdef float_t sm = 0
         for t,row in zip( times, data):
+            #print( "2", self.emission_estimate( t,row ) )
             sm += self.emission_estimate( t,row )
+            print("sm",sm)
         return sm
 
-
-    def multi_baum_welch( self, runs, times, data, iteration = 10 ):
-        """Return all convergences in the array"""
-        graph = numpy.empty( (runs,iteration+1) )
-
-        for i in range( runs ):
-            print(i)
-            graph[i] = self.baum_welch_graph( times, data, iteration )
-
-        return graph
-
-
-    def baum_welch_graph( self, times, data, iteration =10  ):
-        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
-        graph = numpy.empty(iteration+1)
-        graph[0] = self.data_estimate( times, data)
-
-        for i in range(1,iteration+1):
-            self._baum_welch( times, data, 0,1 )
-            graph[i] = self.data_estimate(times, data)
-
-        return graph
-
-    def baum_welch_graph2( self, times, data, iteration =10  ):
-        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
-        graph = numpy.empty(iteration+1)
-        graph[0] = self.data_estimate( times, data)
-
-        for i in range(1,iteration+1):
-            self._baum_welch( times, data, 1,1 )
-            graph[i] = self.data_estimate(times, data)
-
-        return graph
+    ## DEPRECATED
+#    def baum_welch_graph( self, times, data, iteration =10  ):
+#        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
+#        graph = numpy.empty(iteration+1)
+#        graph[0] = self.data_estimate( times, data)
+#
+#        for i in range(1,iteration+1):
+#            self._baum_welch( times, data, 0,1 )
+#            graph[i] = self.data_estimate(times, data)
+#
+#        return graph
+#
+#    def baum_welch_graph2( self, times, data, iteration =10  ):
+#        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
+#        graph = numpy.empty(iteration+1)
+#        graph[0] = self.data_estimate( times, data)
+#
+#        for i in range(1,iteration+1):
+#            self._baum_welch( times, data, 1,1 )
+#            graph[i] = self.data_estimate(times, data)
+#
+#        return graph
 
     def baum_welch( self, times, data, iteration = 10, **kvargs ):
 
-        if 'method' in kvargs:
-            if kvargs['method'] == 'lr':
-                self._baum_welch( times, data, 1, iteration )
-                return
+        if 'out' in kvargs:
+            if kvargs['out'] == 'est':
+                return self._baum_welch( times, data, True, iteration )
 
 
-        self._baum_welch( times, data, 0, iteration )
-
+        self._baum_welch( times, data, False, iteration )
 
 
     #TODO rename and change doc
-    cdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int method , int iterations):
+    cdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int est, int iterations):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
 
-        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau
+        cdef int method = 0 #TODO depreciate the method, after finally excluding the fast convergence.
+
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph
         cdef numpy.ndarray[int_t, ndim=1] t, row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
-        cdef int i,j,k,l,tm,map_time,ix
+        cdef int it,i,j,k,l,tm,map_time,ix
 
         #start_time = time.time()
         #...
@@ -498,9 +493,10 @@ cdef class CtHMM(hmm.HMM):
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
-        for i in range( iterations ):
+        if est:
+            graph = numpy.zeros(iterations+1)
 
-            ##print("iter ", i)
+        for it in range( iterations ):
 
             self._prepare_matrices_pt( times )
 
@@ -512,7 +508,6 @@ cdef class CtHMM(hmm.HMM):
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
 
-
             for t , row in zip( times,data ):
 
                 alpha = self._forward ( t, row )
@@ -522,7 +517,12 @@ cdef class CtHMM(hmm.HMM):
                 ksi = self.double_state_prob( alpha, beta, t, row )
                 #TODO sum probs for same delta(t).
 
+
                 #print("ksi",ksi)
+                if est:
+                    #print ("a", alpha[-1,:])
+                    graph[it] += self.log_sum( alpha[-1,:] )
+                    print("gr",graph[it])
 
 
                 #expected number of being in state i in time 0
@@ -561,6 +561,11 @@ cdef class CtHMM(hmm.HMM):
                 for i in range ( s_num ):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
 
+
+            if est:
+                print("should equal")
+                print(graph[it])
+                print(self.data_estimate(times, data) )
 
             #tau, eta = self.end_state_expectations( ksi_sum ) #TODO move all of these in separate function?
             tau = numpy.zeros( (s_num), dtype=numpy.float64 )
@@ -684,7 +689,12 @@ cdef class CtHMM(hmm.HMM):
 #                for i in range( s_num ):
 #                    self._q[i,i] = - numpy.sum( self._q[i,:] )
 
+        if est:
 
+            print("print!!!")
+            print(graph)
+            graph[iterations] = self.data_estimate(times, data)
+            return graph
 
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
