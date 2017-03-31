@@ -1,7 +1,8 @@
 import numpy
 
-def multi_( self, runs, times, data, iteration = 10 ):
-        """Return all convergences in the array"""
+def multi( self, model, times, data, runs, iteration = 10, **kwargs ):
+        """Run multiple Baum-welch algorithms, always with different random initialization"""
+        
         graph = numpy.empty( (runs,iteration+1) )
 
         for i in range( runs ):
