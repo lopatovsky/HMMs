@@ -61,3 +61,5 @@ def plot_hmm( s_seq, e_seq, **kargs ):
     plt.show()
 
 
+
+

@@ -83,14 +83,12 @@ cdef class CtHMM(hmm.HMM):
         return (A,B,Pi)
 
     @classmethod
-    def random( cls, s, o ):
+    def random( cls, s, o, **kwargs ):
         """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
-        return cls( *CtHMM.get_random_params( s, o ) )
-
-    @classmethod
-    def random_exp( cls, s, o ): #todo docs, join together with random and add parameter exp or norm
-        """Initialize the class by random parameters of 's' hidden states and 'o' output variables"""
-        return cls( *CtHMM.get_random_params_exp( s, o ) )
+        if ('method' in kwargs) and ( kwargs['method'] == 'unif'):
+            return cls( *CtHMM.get_random_params( s, o ) )
+        else:
+            return cls( *CtHMM.get_random_params_exp( s, o ) )   #Default method 'exp'
 
     def set_params_random( self, s, o ):
         """Set parameters by random. Size of 's' hidden states and 'o' output variables"""
@@ -464,8 +462,8 @@ cdef class CtHMM(hmm.HMM):
 
     def baum_welch( self, times, data, iteration = 10, **kvargs ):
 
-        if 'out' in kvargs:
-            if kvargs['out'] == 'est':
+        if 'est' in kvargs:
+            if kvargs['est'] == True:
                 return self._baum_welch( times, data, True, iteration )
 
 
