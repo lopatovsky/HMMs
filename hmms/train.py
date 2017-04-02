@@ -7,11 +7,12 @@ def multi_train(  hidden_states, times, data, runs, iteration = 10, **kwargs ):
                 method: 'exp' - [default] Use exponential distribution for random initialization
                         'unif' - Use uniform distribution for random initialization
 
-                return: 'all' - Return all trained models, sorted by their probability estimation
+                ret: 'all' - Return all trained models, sorted by their probability estimation
                         'best' - [default] Return only the model with the best probability estimation
         """
 
-        if 'method' not in kwargs : kwargs['method'] = 'exp'
+        if 'method' not in kwargs : kwargs['method'] = 'exp'   #default exponential
+        if 'ret' not in kwargs : kwargs['ret'] = 'best'  #default best
 
         models = []
         outputs = numpy.max( data ) + 1
@@ -21,6 +22,12 @@ def multi_train(  hidden_states, times, data, runs, iteration = 10, **kwargs ):
         for i in range( runs ):
             model = hmms.CtHMM.random( hidden_states, outputs, method = kwargs['method']  )  #todo zafunguje ak nema kwarg method vobec?
             graph = model.baum_welch( times, data, iteration, est = True)
-            models.append( ( model, graph )  )
+            models.append( (model, graph)  )
 
-        return models
+
+        models.sort(key=lambda x: x[1][-1] , reverse=True)
+
+        if kwargs['ret'] == 'all': return models
+
+        return models[0]
+

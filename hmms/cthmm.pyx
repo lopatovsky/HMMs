@@ -434,7 +434,6 @@ cdef class CtHMM(hmm.HMM):
         for t,row in zip( times, data):
             #print( "2", self.emission_estimate( t,row ) )
             sm += self.emission_estimate( t,row )
-            print("sm",sm)
         return sm
 
     ## DEPRECATED
@@ -518,9 +517,7 @@ cdef class CtHMM(hmm.HMM):
 
                 #print("ksi",ksi)
                 if est:
-                    #print ("a", alpha[-1,:])
                     graph[it] += self.log_sum( alpha[-1,:] )
-                    print("gr",graph[it])
 
 
                 #expected number of being in state i in time 0
@@ -558,12 +555,6 @@ cdef class CtHMM(hmm.HMM):
                 #sum gamma to the whole dataset array
                 for i in range ( s_num ):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
-
-
-            if est:
-                print("should equal")
-                print(graph[it])
-                print(self.data_estimate(times, data) )
 
             #tau, eta = self.end_state_expectations( ksi_sum ) #TODO move all of these in separate function?
             tau = numpy.zeros( (s_num), dtype=numpy.float64 )
@@ -659,7 +650,7 @@ cdef class CtHMM(hmm.HMM):
             if method == 0 or method == 1:
                 #initial probabilities estimation
                 self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
-                #observetion symbol emission probabilities estimation
+                #observation symbol emission probabilities estimation
                 self._logb = (obs_sum.T - gamma_full_sum).T
                 #jump rates matrice
                 self._q = ( eta.T / tau ).T
@@ -688,9 +679,6 @@ cdef class CtHMM(hmm.HMM):
 #                    self._q[i,i] = - numpy.sum( self._q[i,:] )
 
         if est:
-
-            print("print!!!")
-            print(graph)
             graph[iterations] = self.data_estimate(times, data)
             return graph
 
