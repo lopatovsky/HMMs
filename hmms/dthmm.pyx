@@ -291,26 +291,32 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-    #TODO - merge the estimation counting with the forward alg and baum welch procedure.
-    #TODO move to the small artificial class in art.py - nope
-    def baum_welch_graph( self, data, iteration =10 ):
-        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
-        graph = numpy.empty(iteration+1)
-        graph[0] = self.data_estimate(data)
+#    Deprecated method
+#    def baum_welch_graph( self, data, iteration =10 ):
+#        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
+#        graph = numpy.empty(iteration+1)
+#        graph[0] = self.data_estimate(data)
+#
+#        for i in range(1,iteration+1):
+#            self.baum_welch( data, 1 )
+#            graph[i] = self.data_estimate(data)
+#
+#        return graph
 
-        for i in range(1,iteration+1):
-            self.baum_welch( data, 1 )
-            graph[i] = self.data_estimate(data)
+    def baum_welch( self, data, iteration = 10, **kvargs ):
 
-        return graph
+        if 'est' in kvargs:
+            if kvargs['est'] == True:
+                return self._baum_welch( data, True, iteration )
+
+        self._baum_welch( data, False, iteration )
 
 
     #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
     #TODO2 - change default value to -1 - convergence
     #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
-
-    cpdef baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int iterations = 10 ):
+    cpdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int est, iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
@@ -324,10 +330,13 @@ cdef class DtHMM:
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
-        cdef int i,j,t
+        cdef int i,j,t,it
 
 
-        for i in range( iterations ):
+        if est:
+            graph = numpy.zeros(iterations+1)
+
+        for it in range( iterations ):
 
 
 
@@ -349,6 +358,8 @@ cdef class DtHMM:
                 gamma = self.single_state_prob( alpha, beta )
                 ksi = self.double_state_prob( alpha, beta, row )
 
+                if est:
+                    graph[it] += self.log_sum( alpha[-1,:] )
 
 
                 #expected number of being in state i in time 0
@@ -401,6 +412,10 @@ cdef class DtHMM:
             #print( numpy.exp( self._logpi ) )
             #print( numpy.exp( self._loga ) )
             #print( numpy.exp( self._logb ) )
+
+        if est:
+            graph[iterations] = self.data_estimate( data)
+            return graph
 
 
     def meow(self):
