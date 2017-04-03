@@ -272,10 +272,10 @@ cdef class CtHMM(hmm.HMM):
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
-    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of estimation procedure"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
-        return self._estimate( times, emissions )
+        return self._estimate( states, times, emissions )
 
     cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of backward algorithm"""
@@ -312,7 +312,7 @@ cdef class CtHMM(hmm.HMM):
         return alpha
 
 
-    cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """Calculate the probability of state and emission sequence given the current parameters.
            Return logaritmus of probabilities.
         """
