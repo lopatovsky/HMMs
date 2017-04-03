@@ -126,12 +126,11 @@ def test_growing_likelihood(h_states, o_symbols, data_num, data_len):
     t, e = cthmm.generate_data( ( data_num, data_len ) )
 
     cthmm_t = hmms.CtHMM.random( h_states, o_symbols )
-    
-    dl = cthmm_t.baum_welch( t,e,15, out="est" )
-    print("~~~~~~<")
-    print(dl)
 
+    dl = cthmm_t.baum_welch( t,e,15, est=True )
 
+    #print("~~~~~~<")
+    #print(dl)
 
     assert float_equal_mat( dl, numpy.sort( dl )  )
 
