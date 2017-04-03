@@ -174,7 +174,7 @@ cdef class DtHMM:
 
         return alpha
 
-    cpdef numpy.ndarray[float_t, ndim=2] estimation(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
         """Calculate the probability of state and emission sequence given the current parameters.
            Return logaritmus of probabilities.
         """

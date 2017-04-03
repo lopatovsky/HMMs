@@ -272,6 +272,11 @@ cdef class CtHMM(hmm.HMM):
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
+    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+        """Method for the single call of estimation procedure"""
+        self._prepare_matrices_pt( numpy.array( [times] ) )
+        return self._estimate( times, emissions )
+
     cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of backward algorithm"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
@@ -281,6 +286,7 @@ cdef class CtHMM(hmm.HMM):
     cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
            Return logaritmus of probabilities.
+           Notice: _prepare_matrices_pt method must be called in advance!
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
@@ -305,9 +311,33 @@ cdef class CtHMM(hmm.HMM):
 
         return alpha
 
+
+    cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
+        """Calculate the probability of state and emission sequence given the current parameters.
+           Return logaritmus of probabilities.
+        """
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num, interval
+        cdef float_t prob  #it is log probability
+
+        size = emissions.shape[0]
+        states_num = self._loga.shape[0]
+
+        prob = logpi[ states[0] ] + logb[ states[0], int(emissions[0]) ]
+
+        for i in range(1,size):
+            interval = times[i] - times[i-1]
+            prob += self._pt[ self.tmap[ interval ],states[i-1],states[i]]
+            prob += logb[states[i],int(emissions[i])]
+
+        return prob
+
+
     cpdef numpy.ndarray[float_t, ndim=2] _backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
            Return logaritmus of probabilities.
+           Notice: _prepare_matrices_pt method must be called in advance!
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi

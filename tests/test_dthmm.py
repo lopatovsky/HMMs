@@ -38,7 +38,7 @@ def long_emission( small_hmm ):
     em = numpy.array([0,0,0,1,1,0,1,1,0,0,0,0,0,1,0,0,1,1,0,0,0,1,0,1,1,1,1,0,0,1,1,1])
     return (hmm, em)
 
-def test_froward( small_hmm ):
+def test_forward( small_hmm ):
     """Test forward algorithm"""
     hmm, em = small_hmm
 
@@ -62,6 +62,16 @@ def test_emission_estimate( small_hmm ):
 
     a = 0.1432
     x = numpy.exp( hmm.emission_estimate(em) )
+
+    assert float_equal( a, x )
+
+def test_estimate( small_hmm ):
+    """Test emission_estimate function"""
+    hmm, em = small_hmm
+    states = numpy.array([0,0])
+
+    a = 0.0648
+    x = numpy.exp( hmm.estimate(states,em) )
 
     assert float_equal( a, x )
 
