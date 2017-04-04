@@ -321,15 +321,24 @@ cdef class CtHMM(hmm.HMM):
         cdef int i, s, size, states_num, interval
         cdef float_t prob  #it is log probability
 
+        print(states)
+        print(times)
+        print(emissions)
+
+
         size = emissions.shape[0]
-        states_num = self._loga.shape[0]
 
         prob = logpi[ states[0] ] + logb[ states[0], int(emissions[0]) ]
+        print(prob)
+
 
         for i in range(1,size):
             interval = times[i] - times[i-1]
-            prob += self._pt[ self.tmap[ interval ],states[i-1],states[i]]
+            print(self._pt[ self.tmap[ interval ],states[i-1],states[i]])
+            prob += numpy.log( self._pt[ self.tmap[ interval ],states[i-1],states[i]] )
+            print(logb[states[i],int(emissions[i])])
             prob += logb[states[i],int(emissions[i])]
+            print("prob",numpy.log(prob))
 
         return prob
 

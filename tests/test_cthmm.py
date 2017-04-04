@@ -51,6 +51,26 @@ def test_compare_state_probs_with_discrete( data_num, data_len,dthmm ):
     assert float_equal_mat( gamma, d_gamma  )
     assert float_equal_mat( ksi[0], d_ksi  )
 
+@pytest.mark.parametrize(
+    ['data_num', 'data_len'],
+    [(1, 100),
+     (3, 100),
+     (20, 20),
+     (40, 2), ],
+)
+def test_estimate( data_num, data_len,dthmm ):
+    """Test will run algorithms for counting state probability, determinically with the same initialization for both models"""
+    t,s,e = dthmm.generate_data( (data_num,data_len), times=True )
+
+    ct = hmms.CtHMM.random(3,3)
+    dt = hmms.DtHMM( *ct.get_dthmm_params() )
+
+    cte = ct.estimate(s[0],t[0],e[0])
+    dte = dt.estimate(s[0],e[0])
+
+    assert ( cte == dte )
+
+
 @pytest.mark.parametrize("t,e,num", [
     (numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ]),
      numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ]),
