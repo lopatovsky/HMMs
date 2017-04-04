@@ -209,20 +209,34 @@ cdef class CtHMM(hmm.HMM):
 
 
     #TODO implement variant for square and multiply
-    cdef _prepare_matrices_pt( self, numpy.ndarray[int_t, ndim=2] times ):
+    cdef _prepare_matrices_pt( self, times ):
         """Will pre-count exponencials of matrices for all different time intervals"""
 
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
         cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[int_t, ndim=1] vector
 
-        self._pt = numpy.empty( (times.shape[0]*times.shape[1],q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
-        self.tmap = {} # TODO isn't dict to slow?
+        cdef int max_len = 0, seq_num
+        for vector in times:
+            max_len += vector.shape[0] - 1
+
+        cdef int is_list = isinstance(times, list)
+
+        if is_list: seq_num = len(times)        #list of numpy vectors
+        else: seq_num = times.shape[0]          #numpy matrix
+
+        self._pt = numpy.empty( (max_len,q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
+        self.tmap = {}
         cdef int interval, cnt = 0
 
-        for i in range( times.shape[0] ):
-            for j in range ( 1, times.shape[1] ):
+        for i, vec in enumerate( times ):
+            for j in range ( 1, vec.shape[0] ):
                 #TODO double intervals
-                interval = times[i,j] - times[i,j-1]
+                if is_list:
+                    interval = times[i][j] - times[i][j-1]
+                else:
+                    interval = times[i,j] - times[i,j-1]
+
                 if interval not in self.tmap:
                    #print( "int: ", interval)
                    #print(scipy.linalg.expm( q * interval ))
@@ -509,7 +523,7 @@ cdef class CtHMM(hmm.HMM):
 
 
     #TODO rename and change doc
-    cdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] times, numpy.ndarray[int_t, ndim=2] data, int est, int iterations):
+    cdef _baum_welch(self, times, data, int est, int iterations):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
@@ -520,7 +534,7 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[int_t, ndim=1] t, row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
-        cdef int it,i,j,k,l,tm,map_time,ix
+        cdef int it,i,j,k,l,tm,map_time,ix,seq_num
 
         #start_time = time.time()
         #...
@@ -528,6 +542,9 @@ cdef class CtHMM(hmm.HMM):
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
+
+        if isinstance(data, list): seq_num = len(data)  #list of numpy vectors
+        else: seq_num = data.shape[0]                   #numpy matrix
 
         if est:
             graph = numpy.zeros(iterations+1)
@@ -688,7 +705,7 @@ cdef class CtHMM(hmm.HMM):
             #Update parameters:
             if method == 0 or method == 1:
                 #initial probabilities estimation
-                self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
+                self._logpi = pi_sum - numpy.log( seq_num )  #average
                 #observation symbol emission probabilities estimation
                 self._logb = (obs_sum.T - gamma_full_sum).T
                 #jump rates matrice
