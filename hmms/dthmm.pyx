@@ -142,12 +142,49 @@ cdef class DtHMM:
         """From given emission sequence calculate the likelihood estimation given model parameters"""
         return  self.log_sum( self.forward( emissions )[-1,:] )
 
-    cpdef data_estimate( self, numpy.ndarray[int_t, ndim=2] data ):
-        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
+    cpdef data_estimate( self, emissions):
+        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters
+           Emission sequences can be given as numpy matrix or list of numpy vectors
+        """
+
+        cdef numpy.ndarray[int_t, ndim=1] row
         cdef float sm = 0
-        for row in data:
+
+        for row in emissions:
             sm += self.emission_estimate( row )
         return sm
+
+    cpdef full_data_estimate( self, state_seqs, emissions ):
+        """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
+           Emission and state sequences can be given as numpy matrix or list of numpy vectors
+        """
+        cdef numpy.ndarray[int_t, ndim=1] e,s
+        cdef float sm = 0
+
+        for  e,s in zip( state_seqs, emissions ):
+            sm += self.estimate( s, e )
+        return sm
+
+    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
+        """Calculate the probability of state and emission sequence given the current parameters.
+           Return logaritmus of probabilities.
+        """
+        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num
+        cdef float_t prob  #it is log probability
+
+        size = emissions.shape[0]
+        states_num = self._loga.shape[0]
+
+        prob = logpi[ states[0] ] + logb[ states[0], int(emissions[0]) ]
+
+        for i in range(1,size):
+            prob += loga[states[i-1],states[i]]
+            prob += logb[states[i],int(emissions[i])]
+
+        return prob
 
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] emissions):
@@ -173,28 +210,6 @@ cdef class DtHMM:
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
 
         return alpha
-
-    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] emissions):
-        """Calculate the probability of state and emission sequence given the current parameters.
-           Return logaritmus of probabilities.
-        """
-        cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
-        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
-        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num
-        cdef float_t prob  #it is log probability
-
-        size = emissions.shape[0]
-        states_num = self._loga.shape[0]
-
-        prob = logpi[ states[0] ] + logb[ states[0], int(emissions[0]) ]
-
-        for i in range(1,size):
-            prob += loga[states[i-1],states[i]]
-            prob += logb[states[i],int(emissions[i])]
-
-        return prob
-
 
     cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
