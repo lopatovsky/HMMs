@@ -338,11 +338,12 @@ cdef class DtHMM:
     #TODO2 - change default value to -1 - convergence
     #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
 
-    cpdef _baum_welch(self, numpy.ndarray[int_t, ndim=2] data, int est, iterations = 10 ):
+    cpdef _baum_welch(self, data, int est, iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
+        cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum
         cdef numpy.ndarray[float_t, ndim=3] ksi
 
@@ -352,7 +353,10 @@ cdef class DtHMM:
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
-        cdef int i,j,t,it
+        cdef int i,j,t,it, seq_num
+
+        if isinstance(data, list): seq_num = len(data)  #list of numpy vectors
+        else: seq_num = data.shape[0]                   #numpy matrix
 
 
         if est:
@@ -425,7 +429,7 @@ cdef class DtHMM:
             #Update parameters:
 
             #initial probabilities estimation
-            self._logpi = pi_sum - numpy.log( data.shape[0] )  #average
+            self._logpi = pi_sum - numpy.log( seq_num )  #average
             #transition matrix estimation
             self._loga = (ksi_sum.T - gamma_part_sum).T
             #observetion symbol emission probabilities estimation
