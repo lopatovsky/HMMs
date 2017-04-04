@@ -161,7 +161,7 @@ cdef class DtHMM:
         cdef numpy.ndarray[int_t, ndim=1] e,s
         cdef float sm = 0
 
-        for  e,s in zip( state_seqs, emissions ):
+        for  s,e in zip( state_seqs, emissions ):
             sm += self.estimate( s, e )
         return sm
 

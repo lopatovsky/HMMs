@@ -286,45 +286,40 @@ cdef class CtHMM(hmm.HMM):
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
+    cpdef float_t emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
+        """From given emission sequence calculate the likelihood estimation given model parameters"""
+        #print("alpha", self.forward( times,emissions )[-1,:])
+
+        #print("1", self.log_sum( self.forward( times,emissions )[-1,:] ) )
+
+        return  self.log_sum( self.forward( times,emissions )[-1,:] )
+
+    cpdef float_t data_estimate( self, times , data ):
+        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
+        cdef float_t sm = 0
+        cdef numpy.ndarray[int_t, ndim=1] t,row
+
+
+        for t,row in zip( times, data):
+            #print( "2", self.emission_estimate( t,row ) )
+            sm += self.emission_estimate( t,row )
+        return sm
+
+    cpdef full_data_estimate( self, state_seqs, times, emissions ):
+        """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
+           Emission and state sequences can be given as numpy matrix or list of numpy vectors
+        """
+        cdef numpy.ndarray[int_t, ndim=1] e,s,t
+        cdef float sm = 0
+
+        for  s,t,e in zip( state_seqs, times, emissions ):
+            sm += self.estimate( s, t, e )
+        return sm
+
     cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of estimation procedure"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._estimate( states, times, emissions )
-
-    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
-        """Method for the single call of backward algorithm"""
-        self._prepare_matrices_pt( numpy.array( [times] ) )
-        return self._backward( times, emissions )
-
-
-    cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
-        """From emission sequence calculate the forward variables (alpha) given model parameters.
-           Return logaritmus of probabilities.
-           Notice: _prepare_matrices_pt method must be called in advance!
-        """
-        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
-        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num, interval
-
-        size = emissions.shape[0]
-        states_num = self._q.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
-
-
-        alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
-        for i in range(1,size):
-
-            interval = times[i] - times[i-1]
-            for s in range(states_num):
-
-                alpha[i,s] = self.log_sum( alpha[i-1,:]
-                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) )
-
-            #print(  numpy.exp(alpha[i,:]) )
-            alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
-
-        return alpha
-
 
     cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """Calculate the probability of state and emission sequence given the current parameters.
@@ -356,6 +351,39 @@ cdef class CtHMM(hmm.HMM):
 
         return prob
 
+
+    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+        """Method for the single call of backward algorithm"""
+        self._prepare_matrices_pt( numpy.array( [times] ) )
+        return self._backward( times, emissions )
+
+    cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+        """From emission sequence calculate the forward variables (alpha) given model parameters.
+           Return logaritmus of probabilities.
+           Notice: _prepare_matrices_pt method must be called in advance!
+        """
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
+        cdef int i, s, size, states_num, interval
+
+        size = emissions.shape[0]
+        states_num = self._q.shape[0]
+        cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
+
+
+        alpha[0,:] = logpi + logb[:, int(emissions[0]) ]
+        for i in range(1,size):
+
+            interval = times[i] - times[i-1]
+            for s in range(states_num):
+
+                alpha[i,s] = self.log_sum( alpha[i-1,:]
+                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) )
+
+            #print(  numpy.exp(alpha[i,:]) )
+            alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
+
+        return alpha
 
     cpdef numpy.ndarray[float_t, ndim=2] _backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
@@ -473,21 +501,7 @@ cdef class CtHMM(hmm.HMM):
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-    cpdef float_t emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
-        """From given emission sequence calculate the likelihood estimation given model parameters"""
-        #print("alpha", self.forward( times,emissions )[-1,:])
 
-        #print("1", self.log_sum( self.forward( times,emissions )[-1,:] ) )
-
-        return  self.log_sum( self.forward( times,emissions )[-1,:] )
-
-    cpdef float_t data_estimate( self, numpy.ndarray[int_t, ndim=2] times ,numpy.ndarray[int_t, ndim=2] data ):
-        """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
-        cdef float_t sm = 0
-        for t,row in zip( times, data):
-            #print( "2", self.emission_estimate( t,row ) )
-            sm += self.emission_estimate( t,row )
-        return sm
 
     ## DEPRECATED
 #    def baum_welch_graph( self, times, data, iteration =10  ):
