@@ -214,7 +214,7 @@ cdef class CtHMM(hmm.HMM):
 
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
         cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
-        cdef numpy.ndarray[int_t, ndim=1] vector
+
 
         cdef int max_len = 0, seq_num
         for vector in times:
@@ -227,7 +227,8 @@ cdef class CtHMM(hmm.HMM):
 
         self._pt = numpy.empty( (max_len,q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
         self.tmap = {}
-        cdef int interval, cnt = 0
+        cdef float_t interval
+        cdef int cnt = 0
 
         for i, vec in enumerate( times ):
             for j in range ( 1, vec.shape[0] ):
@@ -281,12 +282,12 @@ cdef class CtHMM(hmm.HMM):
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
 
-    cpdef numpy.ndarray[float_t, ndim=2] forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] forward(self,  times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._forward( times, emissions )
 
-    cpdef float_t emission_estimate(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions ):
+    cpdef float_t emission_estimate(self,  times, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
         #print("alpha", self.forward( times,emissions )[-1,:])
 
@@ -297,7 +298,7 @@ cdef class CtHMM(hmm.HMM):
     cpdef float_t data_estimate( self, times , data ):
         """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters"""
         cdef float_t sm = 0
-        cdef numpy.ndarray[int_t, ndim=1] t,row
+        cdef numpy.ndarray[int_t, ndim=1] row
 
 
         for t,row in zip( times, data):
@@ -309,26 +310,26 @@ cdef class CtHMM(hmm.HMM):
         """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
            Emission and state sequences can be given as numpy matrix or list of numpy vectors
         """
-        cdef numpy.ndarray[int_t, ndim=1] e,s,t
+        cdef numpy.ndarray[int_t, ndim=1] e,s
         cdef float sm = 0
 
         for  s,t,e in zip( state_seqs, times, emissions ):
             sm += self.estimate( s, t, e )
         return sm
 
-    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of estimation procedure"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._estimate( states, times, emissions )
 
-    cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef float_t _estimate(self, numpy.ndarray[int_t, ndim=1] states,  times, numpy.ndarray[int_t, ndim=1] emissions):
         """Calculate the probability of state and emission sequence given the current parameters.
            Return logaritmus of probabilities.
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num, interval
-        cdef float_t prob  #it is log probability
+        cdef int i, s, size, states_num
+        cdef float_t interval, prob  #it is log probability
 
         print(states)
         print(times)
@@ -352,19 +353,20 @@ cdef class CtHMM(hmm.HMM):
         return prob
 
 
-    cpdef numpy.ndarray[float_t, ndim=2] backward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] backward(self, times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of backward algorithm"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
         return self._backward( times, emissions )
 
-    cdef numpy.ndarray[float_t, ndim=2] _forward(self, numpy.ndarray[int_t, ndim=1] times ,numpy.ndarray[int_t, ndim=1] emissions):
+    cdef numpy.ndarray[float_t, ndim=2] _forward(self,  times ,numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the forward variables (alpha) given model parameters.
            Return logaritmus of probabilities.
            Notice: _prepare_matrices_pt method must be called in advance!
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num, interval
+        cdef int i, s, size, states_num
+        cdef float_t interval
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
@@ -385,14 +387,15 @@ cdef class CtHMM(hmm.HMM):
 
         return alpha
 
-    cpdef numpy.ndarray[float_t, ndim=2] _backward(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef numpy.ndarray[float_t, ndim=2] _backward(self, times, numpy.ndarray[int_t, ndim=1] emissions):
         """From emission sequence calculate the backward variables beta) given model parameters.
            Return logaritmus of probabilities.
            Notice: _prepare_matrices_pt method must be called in advance!
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num, interval
+        cdef int i, s, size, states_num
+        cdef float_t interval
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
@@ -410,7 +413,7 @@ cdef class CtHMM(hmm.HMM):
         return beta
 
 
-    cpdef viterbi(self, numpy.ndarray[int_t, ndim=1] times, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef viterbi(self, times, numpy.ndarray[int_t, ndim=1] emissions):
         """From given emission sequence and parameters calculate the most likely state sequence"""
 
         cdef numpy.ndarray[float_t, ndim=2] loga = self._q
@@ -478,12 +481,12 @@ cdef class CtHMM(hmm.HMM):
 
     cpdef numpy.ndarray[float_t, ndim=3] double_state_prob( self, numpy.ndarray[float_t, ndim=2] alpha,
                                                                   numpy.ndarray[float_t, ndim=2] beta,
-                                                                  numpy.ndarray[int_t, ndim=1  ] times,
+                                                                  times,
                                                                   numpy.ndarray[int_t, ndim=1  ] emissions):
         """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
         cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0]-1,alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
-        cdef int interval
+        cdef float_t interval
 
         for t in range( ksi.shape[0]):
 
@@ -545,10 +548,11 @@ cdef class CtHMM(hmm.HMM):
         cdef int method = 0 #TODO depreciate the method, after finally excluding the fast convergence.
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph
-        cdef numpy.ndarray[int_t, ndim=1] t, row
+        cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
-        cdef int it,i,j,k,l,tm,map_time,ix,seq_num
+        cdef int it,i,j,k,l,map_time,ix,seq_num, tmi
+        cdef float_t interval, tm
 
         #start_time = time.time()
         #...
@@ -574,7 +578,6 @@ cdef class CtHMM(hmm.HMM):
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
-
             for t , row in zip( times,data ):
 
                 alpha = self._forward ( t, row )
@@ -595,9 +598,9 @@ cdef class CtHMM(hmm.HMM):
                     pi_sum[i] = self.log_sum_elem( pi_sum[i], gamma[0,i] )
 
                 #sum the ksi with same time interval together
-                for tm in range( t.shape[0] - 1 ):
+                for tmi in range( t.shape[0] - 1 ):
 
-                    interval = t[tm+1]-t[tm]
+                    interval = t[tmi+1]-t[tmi]
                     map_time = self.tmap[ interval ]
 
                     #print("interval", interval)
@@ -606,7 +609,7 @@ cdef class CtHMM(hmm.HMM):
                         for j in range( s_num ):
 
                             #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
-                            ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tm,i,j] )
+                            ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tmi,i,j] )
                             #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
 
                 #print("ksisum",ksi_sum)
@@ -614,9 +617,9 @@ cdef class CtHMM(hmm.HMM):
                 #print("C ksi", ksi_sum[0] )
 
                 #expected number of visiting state i and observing symbol v
-                for tm in range( row.shape[0] ):
+                for tmi in range( row.shape[0] ):
                     for i in range( s_num ):
-                        obs_sum[i,row[tm]] = self.log_sum_elem( obs_sum[i,row[tm]], gamma[tm,i] )
+                        obs_sum[i,row[tmi]] = self.log_sum_elem( obs_sum[i,row[tmi]], gamma[tmi,i] )
 
                 #expected number of visiting state i
                 for i in range( s_num ):
@@ -664,7 +667,8 @@ cdef class CtHMM(hmm.HMM):
 
                         #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
 
-                        tA  = numpy.linalg.matrix_power( temp , tm )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+                        if( tm == int(tm) ):
+                            tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
 
 #                        if i==0 and j==0:
 #                            #tA[0,0] = 5
