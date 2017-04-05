@@ -282,6 +282,33 @@ cdef class CtHMM(hmm.HMM):
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
 
+    cdef _prepare_matrices_n_exp_for_float( self , float_t tm ):
+        """Will pre-count integrals $\int_0^t( e^{Qx}_{k,i} e^{Q(t-x)}_{j,l} dx$ for any states $i,j,k,l \in$ hidden states """
+
+        cdef int s_num = self._q.shape[0]
+
+        #Construct auxiliary matrix A = [[Q,B][0,Q]]
+
+        cdef numpy.ndarray[float_t, ndim=2] A = numpy.zeros(  ( 2*s_num, 2*s_num ), dtype=numpy.float64  )
+
+        A[:s_num,:s_num] = self._q * tm
+        A[s_num:,s_num:] = self._q * tm
+
+        cdef i,j
+        cdef float_t [:,:] temp = numpy.empty( (2*s_num,2*s_num) , dtype=numpy.float64 )
+
+        self._n_exp = numpy.empty( (s_num, s_num, 2*s_num, 2*s_num) , dtype=numpy.float64 )
+
+        for i in range(s_num):
+            for j in range( s_num ):
+                A[i,s_num + j] = tm  # set the subpart matrix B
+
+                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
+
+                self._n_exp[i,j,:,:] = temp
+
+                A[i,s_num + j] = 0  # zero the subpart matrix B
+
     cpdef numpy.ndarray[float_t, ndim=2] forward(self,  times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
         self._prepare_matrices_pt( numpy.array( [times] ) )
@@ -650,6 +677,9 @@ cdef class CtHMM(hmm.HMM):
 
                 #print("tm ix", tm, ix)
 
+                if( tm != int(tm) ):
+                    self._prepare_matrices_n_exp_for_float(tm)
+
                 for i in range(s_num):
                     for j in range( s_num ):
 
@@ -667,8 +697,14 @@ cdef class CtHMM(hmm.HMM):
 
                         #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
 
-                        if( tm == int(tm) ):
+                        if( tm == int(tm)  ):
                             tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+                        else:
+                            tA = temp[:s_num,s_num:]
+
+
+
+
 
 #                        if i==0 and j==0:
 #                            #tA[0,0] = 5
