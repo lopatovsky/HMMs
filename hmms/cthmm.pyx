@@ -7,6 +7,8 @@ cimport numpy
 cimport cython
 from cython cimport view
 
+import time    #for test purpose only
+
 import random
 
 #cython: wraparound=False
@@ -28,6 +30,13 @@ cdef class CtHMM(hmm.HMM):
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
     cdef int time_n  #number of different time intervals
+
+    cdef float_t t1,t2,t3,t4;   #test only
+    def print_ts(self):
+        print("t1", self.t1)
+        print("t2", self.t2)
+        print("t3", self.t3)
+        print("t4", self.t4)
 
     @property
     def time_n(self):
@@ -53,6 +62,10 @@ cdef class CtHMM(hmm.HMM):
         """Initialize the DtHMM by given parameters."""
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( Q,B,Pi )
+        self.t1 = 0    #test only
+        self.t2 = 0
+        self.t3 = 0
+        self.t4 = 0
 
     @classmethod
     def from_file( cls, path ):
@@ -244,7 +257,10 @@ cdef class CtHMM(hmm.HMM):
                    #print("int", interval)
                    #print("Q", q)
 
+                   start_time = time.time()
                    pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array?
+                   self.t1 += time.time() - start_time
+
                    self._pt[cnt,:,:] = pt
 
                    self.tmap[ interval ] = cnt
@@ -276,7 +292,12 @@ cdef class CtHMM(hmm.HMM):
             for j in range( s_num ):
                 A[i,s_num + j] = 1  # set the subpart matrix B
 
+
+
+                start_time = time.time()
                 temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
+                self.t2 += time.time() - start_time
+
 
                 self._n_exp[i,j,:,:] = temp
 
@@ -673,7 +694,7 @@ cdef class CtHMM(hmm.HMM):
             #print( numpy.asarray( self._n_exp[1,1] ) )
             #print("EXP")
 
-            for tm, ix in self.tmap.items():  #iterate trought all different time intervals
+            for tm, ix in self.tmap.items():  #iterate trough all the different time intervals
 
                 #print("tm ix", tm, ix)
 
@@ -698,7 +719,9 @@ cdef class CtHMM(hmm.HMM):
                         #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
 
                         if( tm == int(tm)  ):
+                            start_time = time.time()
                             tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+                            self.t3 += time.time() - start_time
                         else:
                             tA = temp[:s_num,s_num:]
 
