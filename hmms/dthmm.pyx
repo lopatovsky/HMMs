@@ -328,6 +328,44 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
+
+    cpdef maximum_likelihood_estimation( self, s_seqs, e_seqs ):
+        """Given dataset of state and emission sequences estimate the most likely parameters."""
+
+        cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_all, ss, es
+        cdef numpy.ndarray[int_t, ndim=2] sum_move, sum_emit
+
+        cdef int s_num = self._logb.shape[0]  #number of states
+        cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
+        cdef int seq_num,it
+
+
+        if isinstance(s_seqs, list): seq_num = len(s_seqs)  #list of numpy vectors
+        else: seq_num = s_seqs.shape[0]
+
+        sum_0 = numpy.zeros( s_num )
+        sum_all = numpy.zeros( s_num )
+        sum_move = numpy.zeros( (s_num,s_num ))
+        sum_emit = numpy.zeros( (s_num,o_num ))
+
+        for ss,es in zip( s_seqs, e_seqs):
+
+            sum_0[ss[0]]+= 1
+            sum_all[ss[0]] +=1
+            sum_emit[ ss[it], es[it] ]+=1
+
+            for it in range(1, ss.size[0] ):
+                sum_all[ ss[it] ]+=1
+                sum_move[ ss[it-1], ss[it] ]+=1
+                sum_emit[ ss[it], es[it] ]+=1
+
+        self._logpi = sum_0 / seq_num
+        self._loga  = sum_move / sum_all
+        self._logb  = sum_emit / sum_all
+
+
+
+
 #    Deprecated method
 #    def baum_welch_graph( self, data, iteration =10 ):
 #        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
