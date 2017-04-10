@@ -332,7 +332,7 @@ cdef class DtHMM:
     cpdef maximum_likelihood_estimation( self, s_seqs, e_seqs ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
 
-        cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_all, ss, es
+        cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_last, sum_all, ss, es
         cdef numpy.ndarray[int_t, ndim=2] sum_move, sum_emit
 
         cdef int s_num = self._logb.shape[0]  #number of states
@@ -343,25 +343,28 @@ cdef class DtHMM:
         if isinstance(s_seqs, list): seq_num = len(s_seqs)  #list of numpy vectors
         else: seq_num = s_seqs.shape[0]
 
-        sum_0 = numpy.zeros( s_num )
-        sum_all = numpy.zeros( s_num )
-        sum_move = numpy.zeros( (s_num,s_num ))
-        sum_emit = numpy.zeros( (s_num,o_num ))
+        sum_0 =    numpy.zeros  ( s_num , dtype=numpy.int64)
+        sum_last = numpy.zeros  ( s_num , dtype=numpy.int64)
+        sum_all =  numpy.zeros  ( s_num , dtype=numpy.int64)
+        sum_move = numpy.zeros( (s_num,s_num ) , dtype=numpy.int64)
+        sum_emit = numpy.zeros( (s_num,o_num ) , dtype=numpy.int64)
 
         for ss,es in zip( s_seqs, e_seqs):
 
             sum_0[ss[0]]+= 1
-            sum_all[ss[0]] +=1
-            sum_emit[ ss[it], es[it] ]+=1
+            sum_all[ss[0]]+= 1
+            sum_emit[ ss[0], es[0] ]+=1
+            sum_last[ ss[-1] ]+=1
 
-            for it in range(1, ss.size[0] ):
+            for it in range(1, ss.size ):
+
                 sum_all[ ss[it] ]+=1
                 sum_move[ ss[it-1], ss[it] ]+=1
                 sum_emit[ ss[it], es[it] ]+=1
 
-        self._logpi = sum_0 / seq_num
-        self._loga  = sum_move / sum_all
-        self._logb  = sum_emit / sum_all
+        self._logpi = numpy.log( sum_0 / seq_num )
+        self._loga  = numpy.log( (sum_move.T / (sum_all-sum_last ) ).T )
+        self._logb  = numpy.log( (sum_emit.T / sum_all).T )
 
 
 

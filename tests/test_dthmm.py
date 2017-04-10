@@ -4,7 +4,6 @@ import numpy
 
 from common import *
 
-
 @pytest.fixture
 def small_hmm():
     """Create small DtHMM and basic emission sequence for testing of basic functionality"""
@@ -15,6 +14,16 @@ def small_hmm():
 
     emissions = numpy.array([0,1])
     return ( hmm, emissions )
+
+@pytest.fixture
+def small_hmm2():
+    """Create small DtHMM  for testing of basic functionality"""
+    A = numpy.array([[0.9,0.1],[0.4,0.6]])
+    B = numpy.array([[0.75,0.25],[0,1.0]])
+    pi = numpy.array( [0.8,0.2] )
+    hmm = hmms.DtHMM(A,B,pi)
+
+    return hmm
 
 @pytest.fixture
 def short_emission( small_hmm ):
@@ -196,3 +205,35 @@ def test_baum_welch_small_multiple_data( small_random_hmm, hmm_small_out ):
 #    hmm.baum_welch( data , 20 )
 #
 #    assert compare_parameters( hmm, hmm_cycle_out, 1e-2, False )
+
+
+
+
+def test_mle( small_hmm2 ):
+    """Test if maximum_likelihood_estimation function return correct values"""
+    hmm = hmms.DtHMM.random( 2,2 )
+    ss = numpy.array( [
+       [0,0,0,0,0,0],
+       [0,0,0,0,0,1],
+       [0,1,1,1,0,0],
+       [1,1,0,0,0,0],
+       [0,0,0,0,0,0]
+    ] )
+
+    es = numpy.array( [
+       [0,1,1,0,0,0],
+       [0,0,0,1,0,1],
+       [0,1,1,1,1,0],
+       [1,1,0,0,0,0],
+       [0,0,1,0,1,0]
+    ] )
+
+    hmm.maximum_likelihood_estimation( ss, es )
+
+    print( hmm.a )
+    print( hmm.b )
+    print( hmm.pi )
+
+
+    assert compare_parameters( hmm, small_hmm2, 1e-7 )
+
