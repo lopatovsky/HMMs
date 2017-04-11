@@ -102,8 +102,8 @@ def cd_convergence_ex():
     #outc = ct.baum_welch( t,e, iter_num, est=True )
 
     hidden_states = 3
-    runs = 2
-    iterations = 5
+    runs = 10
+    iterations = 50
     out_ct = hmms.multi_train_ct( hidden_states , t, e, runs, iterations, ret='all', method='unif')
     out_dt = hmms.multi_train_dt( hidden_states , e, runs, iterations, ret='all' )
 
@@ -111,10 +111,9 @@ def cd_convergence_ex():
 
     #We can plot and compare both convergence rates. From the essence of models, the continuous model will probably converge a bit slower, but finally will reach the similar value.
 
-    plt.plot( out_ct[1][1][:] / dreal )
-    plt.plot( out_dt[1][1][:] / dreal )
-    plt.plot( out_dt[0][1][:] / dreal )
-    plt.plot( out_ct[0][1][:] / dreal )
+    for i in range(runs):
+        plt.plot( out_dt[0][1][:] / dreal , color="blue" )
+        plt.plot( out_ct[0][1][:] / dreal , color="red" )
 
     #plt.plot( outd[1:] / dreal )
     #plt.plot( outc[1:] / dreal )
