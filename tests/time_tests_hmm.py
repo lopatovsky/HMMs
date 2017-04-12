@@ -3,6 +3,7 @@ import numpy as np
 import time
 import random
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 def get_random_data_dt(  n, m, num, data_len ):
 
@@ -102,18 +103,56 @@ def cd_convergence_ex():
     #outc = ct.baum_welch( t,e, iter_num, est=True )
 
     hidden_states = 3
-    runs = 10
-    iterations = 50
+    runs = 20 #20
+    iterations = 20
     out_ct = hmms.multi_train_ct( hidden_states , t, e, runs, iterations, ret='all', method='unif')
     out_dt = hmms.multi_train_dt( hidden_states , e, runs, iterations, ret='all' )
 
+    out_c = []
+    for ( m, a ) in out_ct:
+        out_c.append(a)
 
+    out_d = []
+    for ( m, a ) in out_dt:
+        out_d.append(a)
 
+    print("out_c")
+    print(out_c)
+    print("out_d")
+    print(out_d)
     #We can plot and compare both convergence rates. From the essence of models, the continuous model will probably converge a bit slower, but finally will reach the similar value.
 
+
+
+    ##LEGEND
+
+    fig = plt.figure()
+    #fig.suptitle('bold figure suptitle', fontsize=14, fontweight='bold')
+
+    ax = fig.add_subplot(111)
+    #fig.subplots_adjust(top=0.85)
+    ax.set_title('Models Comparison')
+
+    ax.set_xlabel('iterations')
+    ax.set_ylabel('performance')
+
+    fire = mpatches.Patch(color='firebrick', label='CT - single run')
+    olive = mpatches.Patch(color='olivedrab', label='DT - single run')
+
+    red_patch = mpatches.Patch(color='red', label='CT - average')
+    char_patch = mpatches.Patch(color='chartreuse', label='DT - average')
+    plt.legend(handles=[olive, char_patch, fire, red_patch ])
+
+    ## DATA PLOT
+
     for i in range(runs):
-        plt.plot( out_dt[0][1][:] / dreal , color="blue" )
-        plt.plot( out_ct[0][1][:] / dreal , color="red" )
+        plt.plot( out_d[i] / dreal , color="olivedrab" )
+        plt.plot( out_c[i] / dreal , color="firebrick" )
+
+    plt.plot( np.average(out_d,  axis=0) / dreal , color="chartreuse" )
+    plt.plot( np.average(out_c,  axis=0) / dreal , color="red" )
+
+
 
     #plt.plot( outd[1:] / dreal )
     #plt.plot( outc[1:] / dreal )
