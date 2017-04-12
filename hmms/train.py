@@ -17,7 +17,7 @@ def multi_train_ct(  hidden_states, times, data, runs, iteration = 10, **kwargs 
         models = []
         outputs = numpy.max( data ) + 1
 
-        print(hidden_states, outputs)
+        #print(hidden_states, outputs)
 
         for i in range( runs ):
             model = hmms.CtHMM.random( hidden_states, outputs, method = kwargs['method']  )

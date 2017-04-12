@@ -65,12 +65,18 @@ def cd_convergence_ex():
     out_c = []
     out_d = []
 
-    models = 5
-    offset = 2
+    models = 1
+    offset = 1
 
     for m in range(models):
 
-        chmm = hmms.CtHMM.random( 3,3, method='unif' )
+        Q = np.array( [[-0.375,0.125,0.25],[0.25,-0.5,0.25],[0.25,0.125,-0.375]] )
+        B = np.array( [[0.8,0.05,0.15],[0.05,0.9,0.05],[0.2,0.05,0.75]] )
+        Pi = np.array( [0.6,0,0.4] )
+
+        chmm = hmms.CtHMM( Q,B,Pi )
+
+        #chmm = hmms.CtHMM.random( 3,3, method='unif' )
         hmms.print_parameters( chmm )
 
         #We can simply create discrete model with equivalent parameters, using function get_dthmm_params.
@@ -92,6 +98,8 @@ def cd_convergence_ex():
 
         #Now we will create two equivalent random models.
 
+        TOTO JE PROBLEM! thay are not equivalent
+
         ct = hmms.CtHMM.random(3,3)
         dt = hmms.DtHMM( *ct.get_dthmm_params() )
 
@@ -105,18 +113,18 @@ def cd_convergence_ex():
         #outc = ct.baum_welch( t,e, iter_num, est=True )
 
         hidden_states = 3
-        runs = 20 #20
-        iterations = 20
+        runs = 3 #20
+        iterations = 30
         out_ct = hmms.multi_train_ct( hidden_states , t, e, runs, iterations, ret='all', method='unif')
         out_dt = hmms.multi_train_dt( hidden_states , e, runs, iterations, ret='all' )
 
 
         for ( m, a ) in out_ct:
-            out_c.append(a)
+            out_c.append(a/dreal)
 
 
         for ( m, a ) in out_dt:
-            out_d.append(a)
+            out_d.append(a/dreal)
 
     print("out_c")
     print(out_c)
@@ -146,8 +154,8 @@ def cd_convergence_ex():
     ## DATA PLOT
 
     for i in range(runs*models):
-        plt.plot( out_d[i][offset:] / dreal , color="chartreuse" )
-        plt.plot( out_c[i][offset:] / dreal , color="red" )
+        plt.plot( out_d[i][offset:]  , color="chartreuse" )
+        plt.plot( out_c[i][offset:]  , color="red" )
 
     #plt.plot( outd[1:] / dreal )
     #plt.plot( outc[1:] / dreal )
@@ -171,8 +179,8 @@ def cd_convergence_ex():
 
     ## DATA PLOT
 
-    plt.plot( np.average(out_d,  axis=0)[offset:] / dreal , color="chartreuse" )
-    plt.plot( np.average(out_c,  axis=0)[offset:] / dreal , color="red" )
+    plt.plot( np.average(out_d,  axis=0)[offset:]  , color="chartreuse" )
+    plt.plot( np.average(out_c,  axis=0)[offset:]  , color="red" )
 
     plt.show()
 
