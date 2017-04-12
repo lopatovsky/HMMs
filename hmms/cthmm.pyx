@@ -354,12 +354,12 @@ cdef class CtHMM(hmm.HMM):
             sm += self.emission_estimate( t,row )
         return sm
 
-    cpdef full_data_estimate( self, state_seqs, times, emissions ):
+    cpdef float_t full_data_estimate( self, state_seqs, times, emissions ):
         """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
            Emission and state sequences can be given as numpy matrix or list of numpy vectors
         """
         cdef numpy.ndarray[int_t, ndim=1] e,s
-        cdef float sm = 0
+        cdef float_t sm = 0
 
         for  s,t,e in zip( state_seqs, times, emissions ):
             sm += self.estimate( s, t, e )

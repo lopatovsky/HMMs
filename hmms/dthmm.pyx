@@ -138,28 +138,28 @@ cdef class DtHMM:
     #    """From given state and emission sequence calculate their likelihood estimation given model parameters"""
     #
 
-    cpdef emission_estimate(self, numpy.ndarray[int_t, ndim=1] emissions ):
+    cpdef float_t emission_estimate(self, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
         return  self.log_sum( self.forward( emissions )[-1,:] )
 
-    cpdef data_estimate( self, emissions):
+    cpdef float_t data_estimate( self, emissions):
         """From the set of given emission sequences in the data calculate their likelihood estimation given model parameters
            Emission sequences can be given as numpy matrix or list of numpy vectors
         """
 
         cdef numpy.ndarray[int_t, ndim=1] row
-        cdef float sm = 0
+        cdef float_t sm = 0
 
         for row in emissions:
             sm += self.emission_estimate( row )
         return sm
 
-    cpdef full_data_estimate( self, state_seqs, emissions ):
+    cpdef float_t full_data_estimate( self, state_seqs, emissions ):
         """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
            Emission and state sequences can be given as numpy matrix or list of numpy vectors
         """
         cdef numpy.ndarray[int_t, ndim=1] e,s
-        cdef float sm = 0
+        cdef float_t sm = 0
 
         for  s,e in zip( state_seqs, emissions ):
             sm += self.estimate( s, e )
