@@ -96,15 +96,6 @@ def cd_convergence_ex():
         print("Data estimation by continuous model:", creal)
         print("Data estimation by discrete model:  ", dreal)
 
-        #Now we will create two equivalent random models.
-
-        TOTO JE PROBLEM! thay are not equivalent
-
-        ct = hmms.CtHMM.random(3,3)
-        dt = hmms.DtHMM( *ct.get_dthmm_params() )
-
-        hmms.print_parameters( ct )
-        hmms.print_parameters( dt )
 
         #We will train them at our dataset. (It can take a while.)
 
@@ -113,11 +104,9 @@ def cd_convergence_ex():
         #outc = ct.baum_welch( t,e, iter_num, est=True )
 
         hidden_states = 3
-        runs = 3 #20
-        iterations = 30
-        out_ct = hmms.multi_train_ct( hidden_states , t, e, runs, iterations, ret='all', method='unif')
-        out_dt = hmms.multi_train_dt( hidden_states , e, runs, iterations, ret='all' )
-
+        runs = 5 #20
+        iterations = 150
+        out_dt, out_ct = hmms.multi_train_ctdt( hidden_states , t, e, runs, iterations, ret='all', method='unif')
 
         for ( m, a ) in out_ct:
             out_c.append(a/dreal)
