@@ -619,16 +619,14 @@ cdef class CtHMM(hmm.HMM):
 
     def baum_welch( self, times, data, iteration = 10, **kvargs ):
 
-        if 'est' in kvargs:
-            if kvargs['est'] == True:
-                return self._baum_welch( times, data, True, iteration )
+        if 'est' not in kvargs: kvargs['est'] = False
+        if 'fast' not in kvargs: kvargs['fast'] = True
 
-
-        self._baum_welch( times, data, False, iteration )
+        return self._baum_welch( times, data, kvargs['est'], kvargs['fast'], iteration )
 
 
     #TODO rename and change doc
-    cdef _baum_welch(self, times, data, int est, int iterations):
+    cdef _baum_welch(self, times, data, int est, int fast, int iterations):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
@@ -725,7 +723,8 @@ cdef class CtHMM(hmm.HMM):
 
             temp = numpy.empty( (s_num*2,s_num*2), dtype=numpy.float64 )
 
-            self._prepare_matrices_n_exp()
+            if fast:
+                self._prepare_matrices_n_exp()
 
             ##print(numpy.asarray(self._n_exp[0,0]))
 
@@ -738,7 +737,7 @@ cdef class CtHMM(hmm.HMM):
 
                 #print("tm ix", tm, ix)
 
-                if( tm != int(tm) ):
+                if( tm != int(tm) or fast==0):
                     self._prepare_matrices_n_exp_for_float(tm)
 
                 for i in range(s_num):
@@ -758,7 +757,7 @@ cdef class CtHMM(hmm.HMM):
 
                         #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
 
-                        if( tm == int(tm)  ):
+                        if( tm == int(tm) and fast  ):
                             start_time = time.time()
                             tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
                             self.t3 += time.time() - start_time

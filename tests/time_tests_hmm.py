@@ -172,9 +172,7 @@ def cd_convergence_ex1():
 
     plt.show()
 
-
-
-def cd_convergence_ex():
+def cd_convergence_ex2():
 
 
     q = np.array( [
@@ -200,11 +198,32 @@ def cd_convergence_ex():
     ])
 
     models = 10
-    offset = 0
+    offset = 1
+
+    ##LEGEND
+
+    fig = plt.figure()
+    #fig.suptitle('bold figure suptitle', fontsize=14, fontweight='bold')
+
+    ax = fig.add_subplot(111)
+    #fig.subplots_adjust(top=0.85)
+    #ax.set_title('Models Comparison')
+
+    ax.set_xlabel('iterations')
+    ax.set_ylabel('performance')
+
+    red = mpatches.Patch(color='red', label='CT - special')
+    char = mpatches.Patch(color='chartreuse', label='DT - special')
+    fire = mpatches.Patch(color='firebrick', label='CT - random')
+    olive = mpatches.Patch(color='olivedrab', label='DT - random')
+
+    plt.legend(handles=[ char, red, olive, fire ])
+
+
 
     for mn in range(models):
 
-
+        print("mn", mn )
         out_c = []
         out_d = []
 
@@ -243,8 +262,8 @@ def cd_convergence_ex():
         #outc = ct.baum_welch( t,e, iter_num, est=True )
 
         hidden_states = 3
-        runs = 2 #20
-        iterations = 5
+        runs = 10 #20
+        iterations = 150
         out_dt, out_ct = hmms.multi_train_ctdt( hidden_states , t, e, runs, iterations, ret='all', method='unif')
 
         for ( m, a ) in out_ct:
@@ -260,11 +279,11 @@ def cd_convergence_ex():
         #    plt.plot( out_c[i][offset:]  , color="red" )
 
         if mn < 5:
-            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="black" )
-            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="brown" )
+            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="chartreuse" )
+            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="red" )
         else:
-            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="red" )
-            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="orange" )
+            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="olivedrab" )
+            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="firebrick" )
 
 
     print("out_c")
@@ -274,26 +293,13 @@ def cd_convergence_ex():
     #We can plot and compare both convergence rates. From the essence of models, the continuous model will probably converge a bit slower, but finally will reach the similar value.
 
 
-
-    ##LEGEND
-
-    fig = plt.figure()
-    #fig.suptitle('bold figure suptitle', fontsize=14, fontweight='bold')
-
-    ax = fig.add_subplot(111)
-    #fig.subplots_adjust(top=0.85)
-    #ax.set_title('Models Comparison')
-
-    ax.set_xlabel('iterations')
-    ax.set_ylabel('performance')
-
-    fire = mpatches.Patch(color='red', label='CT - single run')
-    olive = mpatches.Patch(color='chartreuse', label='DT - single run')
-
-    plt.legend(handles=[olive, fire ])
-
-
     plt.show()
+
+def complexity_ex():
+
+    for i in range(2,21,2):
+        make_time_test_ct( i, 10, 10, 10, 10)
+
 
 def main():
 
@@ -307,7 +313,9 @@ def main():
     #for i in range(2,21,2):
     #    make_time_test_ct( i, 10, 10, 10, 10)
 
-    cd_convergence_ex()
+    #cd_convergence_ex()
+
+    complexity_ex()
 
 
 
