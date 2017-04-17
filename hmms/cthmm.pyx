@@ -324,9 +324,12 @@ cdef class CtHMM(hmm.HMM):
             for j in range( s_num ):
                 A[i,s_num + j] = tm  # set the subpart matrix B
 
+                start_time = time.time()
                 temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
+                self.t2 += time.time() - start_time
 
                 self._n_exp[i,j,:,:] = temp
+
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
 

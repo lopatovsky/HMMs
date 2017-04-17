@@ -1,6 +1,7 @@
 import hmms
 import numpy as np
 import time
+import numpy
 import random
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -40,7 +41,7 @@ def get_random_data_ct(  n, m, num, data_len ):
     return hmm.generate_data( (num,data_len) )
 
 
-def make_time_test_ct( n, m, num, data_len, it_num ):
+def make_time_test_ct( n, m, num, data_len, it_num, fast_val ):
     """Time test, parameters: n-> hidden states, m-> output symbols, num-> number of data vectors, data_len -> length of data vectors,
                               it_num -> number of iterations for Baum-welch algorithm
     """
@@ -50,7 +51,42 @@ def make_time_test_ct( n, m, num, data_len, it_num ):
 
     start_time = time.time()
 
-    hmm.baum_welch( times, data, it_num )
+    hmm.baum_welch( times, data, it_num , fast= fast_val )
+
+    print("Time test size(",n,m,") - ", num, "vectors of len = ", data_len, ",traied in", it_num, "iterations." )
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    print( "Estimation", numpy.exp( hmm.data_estimate(times,data) ) )
+    hmm.print_ts()
+
+
+def get_random_data_ct_od(  n, m, num, data_len, mx_time ):
+    hmm = hmms.CtHMM.random(20,10)
+
+    times , data = hmm.generate_data( (num,data_len) )
+
+    for i in range( num ):
+        time = 0
+        for j in range( data_len ):
+           times[i][j] = time
+           if i == 0 and j == 0: time += mx_time
+           else: time += random.randint(1,mx_time)
+
+    return times, data
+
+
+
+def make_time_test_ct_od( n, m, num, data_len, it_num, fast_val, mx_time ):
+    """Time test, parameters: n-> hidden states, m-> output symbols, num-> number of data vectors, data_len -> length of data vectors,
+                              it_num -> number of iterations for Baum-welch algorithm
+    """
+
+    times,data = get_random_data_ct_od( n, m, num, data_len, mx_time )
+    hmm = hmms.CtHMM.random( n,m )
+
+    start_time = time.time()
+
+    hmm.baum_welch( times, data, it_num , fast= fast_val )
 
     print("Time test size(",n,m,") - ", num, "vectors of len = ", data_len, ",traied in", it_num, "iterations." )
     print("--- %s seconds ---" % (time.time() - start_time))
@@ -295,10 +331,33 @@ def cd_convergence_ex2():
 
     plt.show()
 
-def complexity_ex():
+def complexity_ex1():
 
-    for i in range(2,21,2):
-        make_time_test_ct( i, 10, 10, 10, 10)
+    #for i in range(2,41,2):
+    #    make_time_test_ct( i, 10, 10, 10, 10, True)
+
+    #for i in range(2,41,2):
+    #    make_time_test_ct( i, 10, 10, 10, 10, False)
+
+    #for i in range(2,41,2):
+    #    make_time_test_ct( i, 10, 10, 100, 10, True)
+
+    for i in range(2,41,2):
+        make_time_test_ct( i, 10, 10, 100, 10, False)
+
+
+def complexity_ex2():
+
+
+    #for i in [ 2**x for x in range(1,64)]:
+    #    make_time_test_ct_od( 10, 10, 10, 10, 10, False, i)
+
+    for i in [ 2**x for x in range(1,64)]:
+        make_time_test_ct_od( 10, 10, 10, 10, 10, True, i)
+
+
+
+
 
 
 def main():
@@ -315,7 +374,7 @@ def main():
 
     #cd_convergence_ex()
 
-    complexity_ex()
+    complexity_ex2()
 
 
 
