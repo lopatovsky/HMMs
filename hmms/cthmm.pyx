@@ -416,11 +416,13 @@ cdef class CtHMM(hmm.HMM):
         """
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef numpy.ndarray[float_t, ndim=1] logpi = self._logpi
-        cdef int i, s, size, states_num
+        cdef int i, s, size, states_num, tmap_int
         cdef float_t interval
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
+        #print(states_num)
+
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
 
@@ -428,10 +430,17 @@ cdef class CtHMM(hmm.HMM):
         for i in range(1,size):
 
             interval = times[i] - times[i-1]
+
+            #print("int ", interval)
+            tmap_int = self.tmap[ interval ]
+
             for s in range(states_num):
 
+                #print("ti", tmap_int )
+                #print("s",s)
+
                 alpha[i,s] = self.log_sum( alpha[i-1,:]
-                                         + numpy.log( self._pt[ self.tmap[ interval ],:,s]  ) )
+                                         + numpy.log( self._pt[ tmap_int,:,s]  ) )
 
             #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
@@ -464,7 +473,7 @@ cdef class CtHMM(hmm.HMM):
         return beta
 
 
-    cpdef viterbi(self, times, numpy.ndarray[int_t, ndim=1] emissions):
+    cpdef viterbi(self, times, numpy.ndarray[int_t, ndim=1] emissions, prepare_matrices = True):
         """From given emission sequence and parameters calculate the most likely state sequence"""
 
         cdef numpy.ndarray[float_t, ndim=2] loga = self._q
@@ -473,7 +482,8 @@ cdef class CtHMM(hmm.HMM):
         cdef int i, s, size, states_num, interval
         cdef float_t max_p, temp
 
-        self._prepare_matrices_pt( numpy.array( [times] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
+        if prepare_matrices:
+            self._prepare_matrices_pt( numpy.array( [times] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
@@ -536,6 +546,49 @@ cdef class CtHMM(hmm.HMM):
                                                                   numpy.ndarray[int_t, ndim=1  ] emissions):
         """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
         cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (alpha.shape[0]-1,alpha.shape[1],alpha.shape[1]) , dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        cdef float_t interval
+
+        for t in range( ksi.shape[0]):
+
+            interval = times[t+1] - times[t]
+
+            for i in range( ksi.shape[1]):
+                for j in range( ksi.shape[2]):
+                    ksi[t,i,j] = alpha[t,i]                                              \
+                               + numpy.log( self._pt[ self.tmap[ interval ],i,j] )       \
+                               + logb[j, emissions[t+1] ] + beta[t+1,j]
+
+            ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
+
+        #print(numpy.exp(ksi))
+
+        return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
+
+
+    cdef numpy.ndarray[float_t, ndim=2] _get_hard_table( self, seq ):
+        """Take the most probable state sequence and create hard probability table"""
+
+        states_num = self._q.shape[0]
+        size = seq.shape[0]
+
+        cdef numpy.ndarray[float_t, ndim=2] gamma = numpy.zeros( (size,states_num), dtype=numpy.float64 )
+
+        for i,state in enumerate(seq):
+            gamma[i,state] = 1.0
+
+        return gamma
+
+    cpdef numpy.ndarray[float_t, ndim=3] get_double_state_table( self, path):
+        """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
+
+        states_num = self._q.shape[0]
+        size = seq.shape[0]
+
+        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (size-1,states_num,states_num) , dtype=numpy.float64 )
+
+        TODO ...
+
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
         cdef float_t interval
 
@@ -624,15 +677,20 @@ cdef class CtHMM(hmm.HMM):
 
         if 'est' not in kvargs: kvargs['est'] = False
         if 'fast' not in kvargs: kvargs['fast'] = True
+        if 'method' not in kvargs: kvargs['method'] = "soft"
 
-        return self._baum_welch( times, data, kvargs['est'], kvargs['fast'], iteration )
+        method = 0
+        if kvargs['method'] == "hard": method = 1
+        return self._baum_welch( times, data, kvargs['est'], kvargs['fast'], iteration, method )
 
 
     #TODO rename and change doc
-    cdef _baum_welch(self, times, data, int est, int fast, int iterations):
+    cdef _baum_welch(self, times, data, int est, int fast, int iterations, int met ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
+
+
 
         cdef int method = 0 #TODO depreciate the method, after finally excluding the fast convergence.
 
@@ -660,6 +718,8 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_pt( times )
 
+            print(self.tmap)
+
             ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
@@ -672,9 +732,21 @@ cdef class CtHMM(hmm.HMM):
                 alpha = self._forward ( t, row )
                 beta =  self._backward( t, row )
 
-                gamma = self.single_state_prob( alpha, beta )
-                ksi = self.double_state_prob( alpha, beta, t, row )
-                #TODO sum probs for same delta(t).
+                if met == 0:    #soft method
+
+                    gamma = self.single_state_prob( alpha, beta )
+                    ksi = self.double_state_prob( alpha, beta, t, row )
+                    #TODO sum probs for same delta(t).
+
+                elif met == 1:   #hard method (to count alpha and beta is not useful for hard method - left just for counting of estimation)
+
+                    _,path = self.viterbi( t, row, False )
+                    gamma = self._get_hard_table( path )
+                    ksi = self.get_double_hard_table( path )
+                    #gamma = self.single_state_prob( alpha, beta )
+
+
+
 
 
                 #print("ksi",ksi)

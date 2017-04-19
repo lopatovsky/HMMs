@@ -237,3 +237,15 @@ def test_mle( small_hmm2 ):
 
     assert compare_parameters( hmm, small_hmm2, 1e-7 )
 
+def test_mle_big( ):
+
+    hmm = hmms.DtHMM.random(2,5)
+    states, seq = hmm.generate( 1000 );
+    hmm.maximum_likelihood_estimation( [states], [seq] )
+
+
+
+    hmm = hmms.DtHMM.random(2,5)
+    states, seq = hmm.generate_data( ( 1,1000 ) );
+    hmm.maximum_likelihood_estimation(states, seq)
+
