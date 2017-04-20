@@ -345,9 +345,7 @@ def complexity_ex1():
     for i in range(2,41,2):
         make_time_test_ct( i, 10, 10, 100, 10, False)
 
-
 def complexity_ex2():
-
 
     #for i in [ 2**x for x in range(1,64)]:
     #    make_time_test_ct_od( 10, 10, 10, 10, 10, False, i)
@@ -357,6 +355,43 @@ def complexity_ex2():
 
 
 
+def run_precision( n, m, num, data_len, it_num ):
+    """Time test, parameters: n-> hidden states, m-> output symbols, num-> number of data vectors, data_len -> length of data vectors,
+                              it_num -> number of iterations for Baum-welch algorithm
+    """
+
+    chmm = hmms.CtHMM.random( n,m )
+
+    t,e = chmm.generate_data( ( num, data_len ), 2.0 )
+
+    chmm_i = hmms.CtHMM.random( n,m )
+    chmm_f = hmms.CtHMM( * chmm_i.params )
+
+    graph_i = chmm_i.baum_welch( t, e, it_num, est=True, method="soft", fast=True )
+    graph_f = chmm_f.baum_welch( t, e, it_num, est=True, method="soft", fast=False )
+
+    return (graph_i, graph_f)
+
+def precision_ex():
+
+    it_num = 20
+
+    avg = np.zeros( it_num+1 )
+
+    runs = 3
+
+    for i in range( runs ):
+        print(i)
+        gi, gf = run_precision( 5, 5, 10, 10, it_num )
+        avg = avg + np.fabs(gi-gf)
+
+    avg /= runs
+
+    print(avg)
+
+    plt.plot( range( it_num + 1 ) , avg )
+
+    plt.show()
 
 
 
@@ -374,8 +409,8 @@ def main():
 
     #cd_convergence_ex()
 
-    complexity_ex2()
-
+    #complexity_ex2()
+    precision_ex()
 
 
 if __name__ == "__main__":

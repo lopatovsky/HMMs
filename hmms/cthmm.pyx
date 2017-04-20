@@ -205,7 +205,7 @@ cdef class CtHMM(hmm.HMM):
         return ( times, states, emissions )
 
     #TODO exp param
-    def generate_data( self, size, **kargs ):
+    def generate_data( self, size, exp=0.5, **kargs ):
         """Generate multiple sequences of times and emissions from model parameters
            size = ( number of sequences, length of sequences  )
            **kargs:  states=True : return also sequence of states
@@ -214,7 +214,7 @@ cdef class CtHMM(hmm.HMM):
         t = numpy.empty( size, dtype=int )
         s = numpy.empty( size, dtype=int )
         for i in range( size[0] ):
-            t[i],s[i],e[i] = self.generate( size[1] )
+            t[i],s[i],e[i] = self.generate( size[1], exp )
         if ('states' in kargs) and kargs['states'] == True:
             return(t,s,e)
 
@@ -572,41 +572,26 @@ cdef class CtHMM(hmm.HMM):
         states_num = self._q.shape[0]
         size = seq.shape[0]
 
-        cdef numpy.ndarray[float_t, ndim=2] gamma = numpy.zeros( (size,states_num), dtype=numpy.float64 )
+        cdef numpy.ndarray[float_t, ndim=2] gamma = numpy.full( (size,states_num), -1e90, dtype=numpy.float64 )
 
         for i,state in enumerate(seq):
-            gamma[i,state] = 1.0
+            gamma[i,state] = 0.0
 
         return gamma
 
-    cpdef numpy.ndarray[float_t, ndim=3] get_double_state_table( self, path):
+    cpdef numpy.ndarray[float_t, ndim=3] _get_double_hard_table( self, path):
         """Given forward and backward variables, count the probability for transition from any state x to any state y in any time"""
 
         states_num = self._q.shape[0]
-        size = seq.shape[0]
-
-        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.empty( (size-1,states_num,states_num) , dtype=numpy.float64 )
-
-        TODO ...
-
-        cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
+        size = path.shape[0]
         cdef float_t interval
 
-        for t in range( ksi.shape[0]):
+        cdef numpy.ndarray[float_t, ndim=3] ksi = numpy.full( (size-1,states_num,states_num) , -1e90, dtype=numpy.float64 )
 
-            interval = times[t+1] - times[t]
+        for t in range( size - 1 ):
+            ksi[t, path[t], path[t+1] ] = 0.0
 
-            for i in range( ksi.shape[1]):
-                for j in range( ksi.shape[2]):
-                    ksi[t,i,j] = alpha[t,i]                                              \
-                               + numpy.log( self._pt[ self.tmap[ interval ],i,j] )       \
-                               + logb[j, emissions[t+1] ] + beta[t+1,j]
-
-            ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
-
-        #print(numpy.exp(ksi))
-
-        return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
+        return ksi
 
 
     cpdef maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs ):
@@ -718,8 +703,6 @@ cdef class CtHMM(hmm.HMM):
 
             self._prepare_matrices_pt( times )
 
-            print(self.tmap)
-
             ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
@@ -742,15 +725,16 @@ cdef class CtHMM(hmm.HMM):
 
                     _,path = self.viterbi( t, row, False )
                     gamma = self._get_hard_table( path )
-                    ksi = self.get_double_hard_table( path )
+                    ksi = self._get_double_hard_table( path )
                     #gamma = self.single_state_prob( alpha, beta )
-
-
-
 
 
                 #print("ksi",ksi)
                 if est:
+
+                    #val,_ = self.viterbi( t, row, False )
+                    #graph[it] += val
+
                     graph[it] += self.log_sum( alpha[-1,:] )
 
 
