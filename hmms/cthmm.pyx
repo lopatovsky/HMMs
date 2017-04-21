@@ -87,6 +87,19 @@ cdef class CtHMM(hmm.HMM):
         self._q = Q
         self._logb = numpy.log(B)
         self._logpi = numpy.log(Pi)
+        self.check_params()
+
+    def check_row(self, row, name):
+        eps = 1e-6
+        if numpy.fabs(numpy.sum( row ) - 1.0 ) > eps : print("Parameter error! ", name)
+
+    def check_params(self):
+        """Check if the parameters have correct values"""
+        self.check_row( self.pi , 'pi')
+        for row in self.b:
+            self.check_row( row, 'b')
+        for row in scipy.linalg.expm(self.q):
+            self.check_row( row, 'q')
 
     def get_dthmm_params( self, time_step = 1 ):
         """Transform the jump rate matrix to transition matrix for discrete time of length time_step"""
@@ -701,6 +714,8 @@ cdef class CtHMM(hmm.HMM):
 
         for it in range( iterations ):
 
+            self.check_params()
+
             self._prepare_matrices_pt( times )
 
             ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
@@ -736,6 +751,7 @@ cdef class CtHMM(hmm.HMM):
                     #graph[it] += val
 
                     graph[it] += self.log_sum( alpha[-1,:] )
+                    #graph[it] = numpy.fabs( self.q[0,0] )
 
 
                 #expected number of being in state i in time 0

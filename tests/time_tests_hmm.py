@@ -362,7 +362,7 @@ def run_precision( n, m, num, data_len, it_num ):
 
     chmm = hmms.CtHMM.random( n,m )
 
-    t,e = chmm.generate_data( ( num, data_len ), 2.0 )
+    t,e = chmm.generate_data( ( num, data_len ), 0.001 )
 
     chmm_i = hmms.CtHMM.random( n,m )
     chmm_f = hmms.CtHMM( * chmm_i.params )
@@ -374,11 +374,11 @@ def run_precision( n, m, num, data_len, it_num ):
 
 def precision_ex():
 
-    it_num = 20
+    it_num = 30
 
     avg = np.zeros( it_num+1 )
 
-    runs = 3
+    runs = 10
 
     for i in range( runs ):
         print(i)
@@ -389,7 +389,7 @@ def precision_ex():
 
     print(avg)
 
-    plt.plot( range( it_num + 1 ) , avg )
+    plt.plot( range( it_num  ) , avg[:-1] )
 
     plt.show()
 
