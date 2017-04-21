@@ -91,10 +91,14 @@ cdef class CtHMM(hmm.HMM):
 
     def check_row(self, row, name):
         eps = 1e-6
-        if numpy.fabs(numpy.sum( row ) - 1.0 ) > eps : print("Parameter error! ", name)
+
+        if numpy.fabs(numpy.sum( row ) - 1.0 ) > eps :
+            print( self.q, self.b, self.pi )
+            raise ValueError("Parameter error! ", name)
 
     def check_params(self):
         """Check if the parameters have correct values"""
+        print( self.q, self.b, self.pi )
         self.check_row( self.pi , 'pi')
         for row in self.b:
             self.check_row( row, 'b')
@@ -714,7 +718,8 @@ cdef class CtHMM(hmm.HMM):
 
         for it in range( iterations ):
 
-            self.check_params()
+            #print("it",it)
+            self.check_params() ##TODO only for test reason
 
             self._prepare_matrices_pt( times )
 
@@ -730,13 +735,13 @@ cdef class CtHMM(hmm.HMM):
                 alpha = self._forward ( t, row )
                 beta =  self._backward( t, row )
 
-                if met == 0:    #soft method
+                if met == 0:    ##soft method
 
                     gamma = self.single_state_prob( alpha, beta )
                     ksi = self.double_state_prob( alpha, beta, t, row )
                     #TODO sum probs for same delta(t).
 
-                elif met == 1:   #hard method (to count alpha and beta is not useful for hard method - left just for counting of estimation)
+                elif met == 1:   ##hard method (to count alpha and beta is not useful for hard method - left just for counting of estimation)
 
                     _,path = self.viterbi( t, row, False )
                     gamma = self._get_hard_table( path )
@@ -893,6 +898,8 @@ cdef class CtHMM(hmm.HMM):
             ##print("tau\n",tau)
             #print("eta\n",eta)
 
+
+
             #Update parameters:
             if method == 0 or method == 1:
                 #initial probabilities estimation
@@ -904,6 +911,16 @@ cdef class CtHMM(hmm.HMM):
                 #print(  self._q  )
                 for i in range( s_num ):
                     self._q[i,i] = - numpy.sum( self._q[i,:] )
+
+            if met == 1:
+                #solve 0/0
+                for ind,rw in enumerate(self.b):
+                    if numpy.sum(rw) > 1.5:
+                        self._logb[ind,:] = numpy.log( 1/ self._logb.shape[1] )
+
+
+
+
 
                 #print( numpy.exp( self._logpi ) )
                 #print( self._q )
