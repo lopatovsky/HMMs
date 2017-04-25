@@ -94,11 +94,10 @@ cdef class CtHMM(hmm.HMM):
 
         if numpy.fabs(numpy.sum( row ) - 1.0 ) > eps :
             print( self.q, self.b, self.pi )
-            raise ValueError("Parameter error! ", name)
+            raise ValueError("Parameter error! ", name, "\n in row: ", row)
 
     def check_params(self):
         """Check if the parameters have correct values"""
-        print( self.q, self.b, self.pi )
         self.check_row( self.pi , 'pi')
         for row in self.b:
             self.check_row( row, 'b')
@@ -696,7 +695,7 @@ cdef class CtHMM(hmm.HMM):
 
         cdef int method = 0 #TODO depreciate the method, after finally excluding the fast convergence.
 
-        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph, graph2
         cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
@@ -715,10 +714,11 @@ cdef class CtHMM(hmm.HMM):
 
         if est:
             graph = numpy.zeros(iterations+1)
+            graph2 = numpy.zeros(iterations+1)
 
         for it in range( iterations ):
 
-            #print("it",it)
+            print("it",it)
             self.check_params() ##TODO only for test reason
 
             self._prepare_matrices_pt( times )
@@ -752,8 +752,8 @@ cdef class CtHMM(hmm.HMM):
                 #print("ksi",ksi)
                 if est:
 
-                    #val,_ = self.viterbi( t, row, False )
-                    #graph[it] += val
+                    val,_ = self.viterbi( t, row, False )
+                    graph2[it] += val
 
                     graph[it] += self.log_sum( alpha[-1,:] )
                     #graph[it] = numpy.fabs( self.q[0,0] )
@@ -944,7 +944,8 @@ cdef class CtHMM(hmm.HMM):
 
         if est:
             graph[iterations] = self.data_estimate(times, data)
-            return graph
+            graph2[iterations] = graph2[iterations-1]
+            return (graph, graph2)
 
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):

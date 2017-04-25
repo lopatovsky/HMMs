@@ -6,6 +6,8 @@ import scipy.linalg
 import pandas as pd
 from IPython.display import display
 
+
+
 def print_parameters( hmm ):
 
     print("Initial probabilities (π) :")
