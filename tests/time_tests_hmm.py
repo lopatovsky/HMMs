@@ -788,23 +788,38 @@ def states():
     ax.set_xlabel('iterations')
     ax.set_ylabel('performance')
 
+    train = numpy.zeros( (9,itr) )
+    test = numpy.zeros( (9,itr) )
+
+    runs = 5
+
+    for run in range(runs):
+
+        print("run", run)
+
+        print( train.shape )
+
+        for states in range( 2,9 ):
+
+            print("states", states)
+
+            chmm2 = hmms.CtHMM.random(states,4)
+
+            for i in range(itr):
+                chmm2.baum_welch( t, e, 1 ,method="soft" )
+                train[states,i] += chmm2.data_estimate(t, e) / real
+                test[states,i] +=  chmm2.data_estimate(t2, e2) / real2
 
 
-    for states in range( 2,9 ):
-        chmm2 = hmms.CtHMM.random(states,4)
+    print("train",train)
+    print("test",test)
 
-        train = numpy.zeros(itr)
-        test = numpy.zeros(itr)
-
-        for i in range(itr):
-            chmm2.baum_welch( t, e, 1 ,method="soft" )
-            train[i] = chmm2.data_estimate(t, e)
-            test[i] =  chmm2.data_estimate(t2, e2)
+    for states in range(2,9):
 
         plt.figure(1)
-        plt.plot( train[:] / real, label = str(states)  )
+        plt.plot( train[states] / runs, label = str(states)  )
         plt.figure(2)
-        plt.plot( test[:] / real2, label = str(states)  )
+        plt.plot( test[states] / runs, label = str(states)  )
 
     plt.figure(1)
     plt.legend()
