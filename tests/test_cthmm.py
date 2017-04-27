@@ -18,6 +18,33 @@ def dthmm( cthmm ):
     """The discrete model, created so it behaves identical to the given continuous."""
     return hmms.DtHMM( *cthmm.get_dthmm_params() )
 
+@pytest.fixture
+def cthmm_zeros():
+    """Parameters for cthmm of 3 hidden states and 3  output variables, with zeros is Q"""
+    Q = numpy.array( [[-0.125,0.125,0.0],[0.25,-0.5,0.25],[0.0,0.125,-0.125]] )
+    B = numpy.array( [[0.8,0.05,0.15],[0.05,0.9,0.05],[0.2,0.05,0.75]] )
+    Pi = numpy.array( [0.6,0,0.4] )
+    return hmms.CtHMM(Q,B,Pi)
+
+def test_zeros( cthmm_zeros ):
+
+    t = numpy.array([ [0,5,8,9,14,19],[0,3,6,7,12,13],[0,5,6,11,14,19] ])
+    e = numpy.array([ [0,0,1,0,1,0],[0,1,2,0,1,0],[2,2,0,1,0,2] ])
+
+    cthmm_zeros.baum_welch( t, e, 10 ,method="soft" )
+
+    result = hmms.CtHMM( numpy.array( [[-0.21327285,  0.21327285,  0.        ],
+                                       [ 0.42250406, -0.6310883 ,  0.20858425],
+                                       [ 0.        ,  0.33834679, -0.33834679]]),
+                         numpy.array([[ 0.5696601 ,  0.20239348,  0.22794642],
+                                      [ 0.28613018,  0.71024895,  0.00362086],
+                                      [ 0.56025733,  0.03147241,  0.40827027]]),
+                         numpy.array([ 0.41600342,  0.        ,  0.58399658])
+    )
+
+    assert compare_parameters_no_sort( result, cthmm_zeros)
+
+
 @pytest.mark.parametrize(
     ['data_num', 'data_len'],
     [(1, 100),

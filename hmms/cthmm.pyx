@@ -693,7 +693,7 @@ cdef class CtHMM(hmm.HMM):
 
 
 
-        cdef int method = 0 #TODO depreciate the method, after finally excluding the fast convergence.
+
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph, graph2
         cdef numpy.ndarray[int_t, ndim=1] row
@@ -823,6 +823,8 @@ cdef class CtHMM(hmm.HMM):
                 for i in range(s_num):
                     for j in range( s_num ):
 
+                        if self._q[i,j] == 0 : continue;  #impossible to jump from state i to state j
+
 #                        if i==0 and j==0:
 #                            print(i,j, numpy.asarray(self._n_exp[i,j]))
 #                            print("t1",temp)
@@ -861,38 +863,20 @@ cdef class CtHMM(hmm.HMM):
                         #print("pt",numpy.asarray(self._pt[ ix ]))
 
 
+                        if i == j:
 
-                        if method == 0 :
+                            tA /= self._pt[ ix ]
 
-                            if i == j:
+                            tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )   #tau is not in log prob anymore.
 
-                                tA /= self._pt[ ix ]
+                            #print(tau[i])
 
-                                tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )   #tau is not in log prob anymore.
+                        else:
+                            tA *= self._q[i,j]
+                            tA /= self._pt[ ix ]
+                            eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #eta is not in log prob anymore.
 
-                                #print(tau[i])
-
-                            else:
-                                tA *= self._q[i,j]
-                                tA /= self._pt[ ix ]
-                                eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #eta is not in log prob anymore.
-
-                        if method == 1:
-
-                            if i == j:
-
-                                tA /= self._pt[ ix ]
-
-                                tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) - numpy.log(tm) )   #tau is not in log prob anymore.
-
-                                #print(tau[i])
-
-                            else:
-                                tA *= self._q[i,j]
-                                tA /= self._pt[ ix ]
-                                eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) - numpy.log(tm) )  #eta is not in log prob anymore.
-
-                ##print("tau\n",tau)
+                        ##print("tau\n",tau)
 
 
             ##print("tau\n",tau)
@@ -901,16 +885,16 @@ cdef class CtHMM(hmm.HMM):
 
 
             #Update parameters:
-            if method == 0 or method == 1:
-                #initial probabilities estimation
-                self._logpi = pi_sum - numpy.log( seq_num )  #average
-                #observation symbol emission probabilities estimation
-                self._logb = (obs_sum.T - gamma_full_sum).T
-                #jump rates matrice
-                self._q = ( eta.T / tau ).T
-                #print(  self._q  )
-                for i in range( s_num ):
-                    self._q[i,i] = - numpy.sum( self._q[i,:] )
+
+            #initial probabilities estimation
+            self._logpi = pi_sum - numpy.log( seq_num )  #average
+            #observation symbol emission probabilities estimation
+            self._logb = (obs_sum.T - gamma_full_sum).T
+            #jump rates matrice
+            self._q = ( eta.T / tau ).T
+            #print(  self._q  )
+            for i in range( s_num ):
+                self._q[i,i] = - numpy.sum( self._q[i,:] )
 
             if met == 1:
                 #solve 0/0
@@ -927,20 +911,6 @@ cdef class CtHMM(hmm.HMM):
                 #print( "CT-HMM qt, t = 1s  like A" )
                 #print( scipy.linalg.expm( self._q ) )
                 #print( numpy.exp( self._logb ) )
-#
-#            if method == 1:
-#
-#                lr = 0.5
-#
-#                #initial probabilities estimation
-#                self._logpi = lr + self._logpi ,  (1.0-lr) +(  pi_sum - numpy.log( data.shape[0] )  ) #average
-#                #observetion symbol emission probabilities estimation
-#                self._logb = lr + self._logpi ,  (1.0-lr) +(  (obs_sum.T - gamma_full_sum).T )
-#                #jump rates matrice
-#                self._q = lr * self._logpi +  (1.0-lr) *(  ( eta.T / tau ).T )
-#                #print(  self._q  )
-#                for i in range( s_num ):
-#                    self._q[i,i] = - numpy.sum( self._q[i,:] )
 
         if est:
             graph[iterations] = self.data_estimate(times, data)

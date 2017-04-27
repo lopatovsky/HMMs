@@ -6,6 +6,7 @@ import random
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
+import scipy.linalg
 
 
 def distance( A, B ):
@@ -760,14 +761,18 @@ def states():
     #Pi = np.array( [0.69,0.2,0.05,0.05,0.01] )
 
     Q = np.array( [[-0.5,0.5,0,0,0],[0.25,-0.5,0.25,0.0,0.0],[0,0.25,-0.5,0.25,0.0,],[0,0,0.25,-0.5,0.25,],[0,0,0,0.5,-0.5]] )
-    B = np.array( [[0.85, 0.05, 0.05, 0.05  ],[ 0.05, 0.85, 0.05, 0.05 ],[ 0.05, 0.05,0.85, 0.05 ],[ 0.05, 0.05, 0.05, 0.85],[0.85, 0.05, 0.05, 0.05]] )
+    B = np.array( [[0.85, 0.09, 0.05, 0.01  ],[ 0.07, 0.85, 0.07, 0.01 ],[ 0.01, 0.07,0.85, 0.07 ],[ 0.07, 0.01, 0.07, 0.85],[0.85, 0.01, 0.05, 0.09]] )
     Pi = np.array( [0.4,0.1,0.05,0.05,0.4] )
-    Q/=1.5
+    Q/=2
 
     chmm = hmms.CtHMM( Q,B,Pi )
     hmms.print_parameters( chmm )
 
-    t,e = chmm.generate_data( (10,10) )
+    #big dataset
+    t,e = chmm.generate_data( (100,100) )
+    #small dataset
+    #t,e = chmm.generate_data( (15,15) )
+
     t2,e2 = chmm.generate_data( (100,100) )
     print(t,e)
 
@@ -788,16 +793,14 @@ def states():
     ax.set_xlabel('iterations')
     ax.set_ylabel('performance')
 
-    train = numpy.zeros( (9,itr) )
-    test = numpy.zeros( (9,itr) )
+    train = numpy.zeros( (9,itr+1) )
+    test = numpy.zeros( (9,itr+1) )
 
-    runs = 5
+    runs = 3
 
     for run in range(runs):
 
         print("run", run)
-
-        print( train.shape )
 
         for states in range( 2,9 ):
 
@@ -806,9 +809,13 @@ def states():
             chmm2 = hmms.CtHMM.random(states,4)
 
             for i in range(itr):
-                chmm2.baum_welch( t, e, 1 ,method="soft" )
+
                 train[states,i] += chmm2.data_estimate(t, e) / real
                 test[states,i] +=  chmm2.data_estimate(t2, e2) / real2
+                chmm2.baum_welch( t, e, 1 ,method="soft" )
+
+            train[states,-1] += chmm2.data_estimate(t, e) / real
+            test[states,-1] +=  chmm2.data_estimate(t2, e2) / real2
 
 
     print("train",train)
@@ -831,6 +838,56 @@ def states():
     input()
 
 
+def expm_time( val ):
+
+    shape = (100,100)
+
+    Q = numpy.full( shape, val ) - shape[0] * numpy.eye( shape[0] ) * val
+
+    start_time = time.time()
+
+    Q2 = scipy.linalg.expm( Q )
+
+    ret = (time.time() - start_time)
+
+    print(Q2)
+
+    return ret
+
+
+def expm_test():
+
+    time = numpy.zeros( 50 );
+
+    rep = 5
+
+    for j in range(rep):
+        print(j)
+        for i,val in enumerate( [ 2.0**x for x in range(1,51)] ):
+
+            timex = expm_time( (val + random.randint(1, 100))*0.888978745 )
+            #print(timex)
+            time[i] += timex
+
+    print( "*" * 10 )
+    print( time/rep )
+
+    X = [ 2**x for x in range(1,51)]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel('approximate length of the time intervals')
+    ax.set_ylabel('time [s]')
+
+    ax.set_xscale("log", nonposx='clip')
+
+
+    plt.plot(X, time/rep )  #whole time -al:float
+
+    plt.legend()
+
+    plt.show()
 
 
 def main():
@@ -854,6 +911,7 @@ def main():
 
     #soft_hard2()
     states()
+    #expm_test()
 
 
 if __name__ == "__main__":
