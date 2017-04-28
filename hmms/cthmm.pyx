@@ -697,10 +697,6 @@ cdef class CtHMM(hmm.HMM):
            Input array data is the numpy array of observation sequences.
         """
 
-
-
-
-
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph, graph2
         cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
@@ -720,12 +716,12 @@ cdef class CtHMM(hmm.HMM):
 
         if est:
             graph = numpy.zeros(iterations+1)
-            graph2 = numpy.zeros(iterations+1)
+            #graph2 = numpy.zeros(iterations+1) #frozen feature
 
         for it in range( iterations ):
 
             print("it",it)
-            self.check_params() ##TODO only for test reason
+            #self.check_params() ##TODO only for test reason
 
             self._prepare_matrices_pt( times )
 
@@ -758,8 +754,8 @@ cdef class CtHMM(hmm.HMM):
                 #print("ksi",ksi)
                 if est:
 
-                    val,_ = self.viterbi( t, row, False )
-                    graph2[it] += val
+                    #val,_ = self.viterbi( t, row, False ) #frozen feature
+                    #graph2[it] += val                     #frozen feature
 
                     graph[it] += self.log_sum( alpha[-1,:] )
                     #graph[it] = numpy.fabs( self.q[0,0] )
@@ -920,9 +916,9 @@ cdef class CtHMM(hmm.HMM):
 
         if est:
             graph[iterations] = self.data_estimate(times, data)
-            graph2[iterations] = graph2[iterations-1]
-            return (graph, graph2)
-
+            #graph2[iterations] = graph2[iterations-1]  #frozen feature
+            #return (graph, graph2) #frozen feature
+            return graph
 
     #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
         #self._prepare_matrices_n_exp()
