@@ -643,6 +643,129 @@ def soft_hard2():
     plt.show()
 
 
+def bw_test( chmm, t, e, tt, et, _method ):
+    """ return convergence line on both training (t,e) and testing datasets (tt,et)"""
+
+    train = numpy.zeros( itr+1 )
+    test = numpy.zeros(  itr+1 )
+
+    train_vit = numpy.zeros( itr+1 )
+    test_vit = numpy.zeros(  itr+1 )
+
+    for i in range(itr):
+
+        train[i] = chmm.data_estimate(t, e)
+        test[i] =  chmm.data_estimate(tt, et)
+        train_vit[i] = chmm.prob_vit(t, e)
+        test_vit[i] =  chmm.prob_vit(tt, et)
+        chmm.baum_welch( t, e, 1 , est=False ,method=_method )
+
+    train[-1] = chmm.data_estimate(t, e)
+    test[-1] =  chmm.data_estimate(t2, e2)
+    train_vit[-1] = chmm.prob_vit(t, e)
+    test_vit[-1] =  chmm.prob_vit(tt, et)
+
+    return [train,test,train_vit,test_vit]
+
+
+def soft_hard3():
+    """ need to remove comments in cthmm for graph2"""
+
+    st = 2
+    obs = 2
+
+    itr = 10+1
+
+    s = numpy.zeros( (4,itr+1) )
+    h = numpy.zeros( (4,itr+1) )
+
+    rsum = 0
+    rvsum = 0
+
+    runs = 2
+
+    for it in range(runs):
+
+        print(it)
+
+        chmm = hmms.CtHMM.random(st,obs)
+        t,e = chmm.generate_data( (5,5) )
+        tt,et = chmm.generate_data( (10,5) ) #test dataset
+
+        real = chmm.data_estimate( t,e )
+        real_vit = prob_vit( chmm, t, e )
+
+        hmms.CtHMM.random( st,obs )
+        hmms.CtHMM( * chmm_s.params )
+
+        s_temp = bw_test(chmm_s,t,e,tt,et,"soft")
+        h_temp = bw_test(chmm_s,t,e,tt,et,"hard")
+
+        rsum += real
+        rvsum += real_v
+
+        for i in range(2):
+            s[i] += s_temp[i] /real
+            h[i] += h_temp[i] /real
+
+        for i in range(2,4):
+            s[i] += s_temp[i] /real_vit
+            h[i] += h_temp[i] /real_vit
+
+    ... to koniec, dorob grafy ...
+
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel('iterations')
+    ax.set_ylabel('performance')
+
+    #For better visibility of the graph, we cut first two values.
+    plt.plot( gs[:-1] / runs, color="red" , label = "soft" )
+    plt.plot( gh[:-1] / runs, color="chartreuse", label = "hard"  )
+    plt.plot( gc[:-1] / runs, color="olivedrab", label = "comb")
+    #plt.rcParams['figure.figsize'] = [20,20]
+
+
+    plt.legend()
+
+    plt.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xlabel('iterations')
+    ax.set_ylabel('performance')
+
+    #For better visibility of the graph, we cut first two values.
+    plt.plot( gs2[:-1] / runs, color="red", label = "soft"  )
+    plt.plot( gh2[:-1] / runs, color="blue", label = "hard"  )
+    plt.plot( gc2[:-1] / runs, color="purple", label = "comb" )
+    #plt.rcParams['figure.figsize'] = [20,20]
+
+    plt.legend()
+    plt.show()
+
+    print( chmm_h.data_estimate( t,e ) )
+
+    hmms.print_parameters( chmm )
+    hmms.print_parameters( chmm_s )
+    hmms.print_parameters( chmm_h )
+
+    print("prob:")
+    print("real", real_v )
+    print( "h: ", prob_vit( chmm_h , t, e)   )
+    print( "s: ", prob_vit( chmm_s , t, e)   )
+    print( "c: ", prob_vit (chmm_c , t, e)   )
+
+    print("distance: ")
+
+    #print( "h: ", dist_vit( chmm, chmm_h , t, e) / real_v  )
+    #print( "s: ", dist_vit( chmm, chmm_s , t, e) / real_v  )
+    #print( "c: ", dist_vit( chmm, chmm_c , t, e) / real_v  )
+
+
 def soft_hard():
     """ need to remove comments in cthmm for graph2"""
 
@@ -652,10 +775,10 @@ def soft_hard():
 
     #chmm = hmms.CtHMM( Q,B,Pi )
 
-    st = 10
-    obs = 10
+    st = 2
+    obs = 2
 
-    itr = 100+1
+    itr = 10+1
 
     gs = numpy.zeros( itr+1 )
     gh = numpy.zeros( itr+1 )
@@ -667,24 +790,25 @@ def soft_hard():
     rsum = 0
     rvsum = 0
 
-    runs = 5
+    runs = 2
 
     for it in range(runs):
 
         print(it)
 
         chmm = hmms.CtHMM.random(st,obs)
-        t,e = chmm.generate_data( (50,10) )
+        t,e = chmm.generate_data( (5,5) )
+        tt,et = chmm.generate_data( (10,5) ) #test dataset
 
         chmm_s = hmms.CtHMM.random( st,obs )
         chmm_h = hmms.CtHMM( * chmm_s.params )
         chmm_c = hmms.CtHMM( * chmm_s.params )
 
-        print("comb")
+        """print("comb")
         graph_comb, g2_comb = chmm_c.baum_welch( t, e, 5, est=True, method="hard" )
         tmp, tmp2 = chmm_c.baum_welch( t, e, itr-5, est=True, method="soft" )
         g2_comb = np.append( g2_comb[:-1],  tmp2 )
-        graph_comb = np.append( graph_comb[:-1],  tmp )
+        graph_comb = np.append( graph_comb[:-1],  tmp )"""
         print("hard")
         graph_hard, g2_hard = chmm_h.baum_welch( t, e, itr, est=True, method="hard" )
         print("soft")
@@ -796,7 +920,7 @@ def states():
     train = numpy.zeros( (9,itr+1) )
     test = numpy.zeros( (9,itr+1) )
 
-    runs = 3
+    runs = 5
 
     for run in range(runs):
 

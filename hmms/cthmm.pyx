@@ -261,7 +261,7 @@ cdef class CtHMM(hmm.HMM):
 
         for i, vec in enumerate( times ):
             for j in range ( 1, vec.shape[0] ):
-                #TODO double intervals
+
                 if is_list:
                     interval = times[i][j] - times[i][j-1]
                 else:
@@ -306,6 +306,9 @@ cdef class CtHMM(hmm.HMM):
 
         for i in range(s_num):
             for j in range( s_num ):
+
+                if self._q[i,j] == 0 : continue;
+
                 A[i,s_num + j] = 1  # set the subpart matrix B
 
 
@@ -338,6 +341,9 @@ cdef class CtHMM(hmm.HMM):
 
         for i in range(s_num):
             for j in range( s_num ):
+
+                if self._q[i,j] == 0 : continue;
+
                 A[i,s_num + j] = tm  # set the subpart matrix B
 
                 start_time = time.time()
