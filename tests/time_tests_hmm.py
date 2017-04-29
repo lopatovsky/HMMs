@@ -643,7 +643,7 @@ def soft_hard2():
     plt.show()
 
 
-def bw_test( chmm, t, e, tt, et, _method ):
+def bw_test( chmm, t, e, tt, et, _method, itr ):
     """ return convergence line on both training (t,e) and testing datasets (tt,et)"""
 
     train = numpy.zeros( itr+1 )
@@ -656,14 +656,14 @@ def bw_test( chmm, t, e, tt, et, _method ):
 
         train[i] = chmm.data_estimate(t, e)
         test[i] =  chmm.data_estimate(tt, et)
-        train_vit[i] = chmm.prob_vit(t, e)
-        test_vit[i] =  chmm.prob_vit(tt, et)
+        train_vit[i] = prob_vit(chmm, t, e)
+        test_vit[i] =  prob_vit(chmm, tt, et)
         chmm.baum_welch( t, e, 1 , est=False ,method=_method )
 
     train[-1] = chmm.data_estimate(t, e)
-    test[-1] =  chmm.data_estimate(t2, e2)
-    train_vit[-1] = chmm.prob_vit(t, e)
-    test_vit[-1] =  chmm.prob_vit(tt, et)
+    test[-1] =  chmm.data_estimate(tt, et)
+    train_vit[-1] = prob_vit(chmm, t, e)
+    test_vit[-1] =  prob_vit(chmm, tt, et)
 
     return [train,test,train_vit,test_vit]
 
@@ -671,99 +671,64 @@ def bw_test( chmm, t, e, tt, et, _method ):
 def soft_hard3():
     """ need to remove comments in cthmm for graph2"""
 
-    st = 2
-    obs = 2
+    Q = np.array( [[-0.375,0.125,0.25],[0.25,-0.5,0.25],[0.25,0.125,-0.375]] )
+    B = np.array( [[0.8,0.05,0.15],[0.05,0.9,0.05],[0.2,0.05,0.75]] )
+    Pi = np.array( [0.6,0,0.4] )
 
-    itr = 10+1
+    chmm = hmms.CtHMM( Q,B,Pi )
+
+    st = 3
+    obs = 3
+
+    itr = 50+1
 
     s = numpy.zeros( (4,itr+1) )
     h = numpy.zeros( (4,itr+1) )
 
-    rsum = 0
-    rvsum = 0
+    rsum = numpy.zeros( 4 )
 
-    runs = 2
+
+    runs = 1
 
     for it in range(runs):
 
         print(it)
 
-        chmm = hmms.CtHMM.random(st,obs)
-        t,e = chmm.generate_data( (5,5) )
-        tt,et = chmm.generate_data( (10,5) ) #test dataset
+        #chmm = hmms.CtHMM.random(st,obs)
+        t,e = chmm.generate_data( (25,25) )
+        tt,et = chmm.generate_data( (100,100) ) #test dataset
 
-        real = chmm.data_estimate( t,e )
-        real_vit = prob_vit( chmm, t, e )
+        rsum[0] = chmm.data_estimate( t,e )
+        rsum[2] = prob_vit( chmm, t, e )
 
-        hmms.CtHMM.random( st,obs )
-        hmms.CtHMM( * chmm_s.params )
+        rsum[1] = chmm.data_estimate( tt,et )
+        rsum[3] = prob_vit( chmm, tt, et )
 
-        s_temp = bw_test(chmm_s,t,e,tt,et,"soft")
-        h_temp = bw_test(chmm_s,t,e,tt,et,"hard")
+        chmm_s = hmms.CtHMM.random( st,obs )
+        chmm_h = hmms.CtHMM( * chmm_s.params )
 
-        rsum += real
-        rvsum += real_v
+        s_temp = bw_test(chmm_s,t,e,tt,et,"soft",itr)
+        h_temp = bw_test(chmm_s,t,e,tt,et,"hard",itr)
 
-        for i in range(2):
-            s[i] += s_temp[i] /real
-            h[i] += h_temp[i] /real
+        for i in range(4):
+            s[i] += s_temp[i] / rsum[i]
+            h[i] += h_temp[i] / rsum[i]
 
-        for i in range(2,4):
-            s[i] += s_temp[i] /real_vit
-            h[i] += h_temp[i] /real_vit
+    for i in range( 4 ):
+        fig = plt.figure(i)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('iterations')
+        ax.set_ylabel('performance')
+        plt.figure(i)
+        plt.plot( s[i] / runs, label = "soft method"  )
+        plt.plot( h[i] / runs, label = "hard method"  )
+        plt.legend()
+        fig.show()
 
-    ... to koniec, dorob grafy ...
-
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ax.set_xlabel('iterations')
-    ax.set_ylabel('performance')
-
-    #For better visibility of the graph, we cut first two values.
-    plt.plot( gs[:-1] / runs, color="red" , label = "soft" )
-    plt.plot( gh[:-1] / runs, color="chartreuse", label = "hard"  )
-    plt.plot( gc[:-1] / runs, color="olivedrab", label = "comb")
-    #plt.rcParams['figure.figsize'] = [20,20]
+    input()
 
 
-    plt.legend()
 
-    plt.show()
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    ax.set_xlabel('iterations')
-    ax.set_ylabel('performance')
-
-    #For better visibility of the graph, we cut first two values.
-    plt.plot( gs2[:-1] / runs, color="red", label = "soft"  )
-    plt.plot( gh2[:-1] / runs, color="blue", label = "hard"  )
-    plt.plot( gc2[:-1] / runs, color="purple", label = "comb" )
-    #plt.rcParams['figure.figsize'] = [20,20]
-
-    plt.legend()
-    plt.show()
-
-    print( chmm_h.data_estimate( t,e ) )
-
-    hmms.print_parameters( chmm )
-    hmms.print_parameters( chmm_s )
-    hmms.print_parameters( chmm_h )
-
-    print("prob:")
-    print("real", real_v )
-    print( "h: ", prob_vit( chmm_h , t, e)   )
-    print( "s: ", prob_vit( chmm_s , t, e)   )
-    print( "c: ", prob_vit (chmm_c , t, e)   )
-
-    print("distance: ")
-
-    #print( "h: ", dist_vit( chmm, chmm_h , t, e) / real_v  )
-    #print( "s: ", dist_vit( chmm, chmm_s , t, e) / real_v  )
-    #print( "c: ", dist_vit( chmm, chmm_c , t, e) / real_v  )
 
 
 def soft_hard():
@@ -1033,8 +998,8 @@ def main():
     #complexity_ex4()
     #precision_ex2()
 
-    #soft_hard2()
-    states()
+    soft_hard3()
+    #states()
     #expm_test()
 
 
