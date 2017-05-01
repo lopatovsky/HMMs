@@ -244,6 +244,8 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
         cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
 
+        #print("p",self._q)
+
 
         cdef int max_len = 0, seq_num
         for vector in times:
@@ -894,6 +896,15 @@ cdef class CtHMM(hmm.HMM):
             self._logb = (obs_sum.T - gamma_full_sum).T
             #jump rates matrice
             self._q = ( eta.T / tau ).T
+
+            #print("b",self._q)
+
+            self._q = numpy.nan_to_num(self._q)   # nan can appear, when some of the states is not reachable
+
+            if sum( self._q.flatten() ) == 0:
+                raise ValueError("Parameter error! Matrix Q can't contain unreachable states.")
+            #print("e",self._q)
+
             #print(  self._q  )
             for i in range( s_num ):
                 self._q[i,i] = - numpy.sum( self._q[i,:] )

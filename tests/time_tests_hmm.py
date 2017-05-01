@@ -927,6 +927,80 @@ def states():
     input()
 
 
+def random_3diag( n, all_rand ):
+
+    mask = np.eye(n, k=1) + np.eye(n,k=0) + np.eye(n,k=-1)
+
+    Q = np.random.rand(n,n)
+    Q *= mask
+
+    if all_rand:
+        B = np.random.rand(n,n)
+        Pi = np.random.rand(n)
+
+    else:
+        B = np.eye(n, k=1)*0.05 + np.eye(n,k=0)*0.9 + np.eye(n,k=-1)*0.05
+        Pi= np.ones(n)
+
+    B *= mask
+
+    for i in range(n):
+        B[i] /= np.sum( B[i] )
+        Q[i,i] = - np.sum( Q[i] ) + Q[i,i]
+    Pi /= np.sum( Pi )
+
+    return hmms.CtHMM( Q,B,Pi )
+
+
+def states2():
+
+    s = []
+    d = []
+
+    rng = range(25,36,5)
+
+    for states in rng:
+
+        model = random_3diag( states , False )
+        sparse = random_3diag( states , True )
+        dense =  hmms.CtHMM.random(states,states)
+
+        t,e = model.generate_data( (10,100) )
+
+        #print(t,e)
+
+        start_time = time.time()
+        sparse.baum_welch( t, e, 1 ,method="soft" )
+        stime = time.time() - start_time
+
+        s.append( stime )
+        print(states, " states -> time:" , stime )
+
+        start_time = time.time()
+        dense.baum_welch( t, e, 1 ,method="soft" )
+        dtime = time.time() - start_time
+        d.append( dtime )
+
+
+        print(states, " states -> time:" , dtime )
+
+
+    print(s)
+    print(d)
+
+    fig = plt.figure()
+
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('number of states')
+    ax.set_ylabel('time [s]')
+
+    plt.plot( rng, s, label = "sparse matrix"  )
+    plt.plot( rng, d, label = "dense matrix"  )
+    plt.legend()
+    fig.show()
+    input()
+
+
 def expm_time( val ):
 
     shape = (100,100)
@@ -998,9 +1072,10 @@ def main():
     #complexity_ex4()
     #precision_ex2()
 
-    soft_hard3()
+    #soft_hard3()
     #states()
     #expm_test()
+    states2()
 
 
 if __name__ == "__main__":
