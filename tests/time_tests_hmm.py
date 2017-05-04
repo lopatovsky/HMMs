@@ -642,9 +642,28 @@ def soft_hard2():
 
     plt.show()
 
+def baum_welch_test( chmm, t, e, tt, et, _method, itr ):
+    """ return convergence line on both training (t,e) and testing datasets (tt,et) for dataset likelihood and viterbi"""
+
+    train = numpy.zeros( itr+1 )
+    test = numpy.zeros(  itr+1 )
+
+    for i in range(itr):
+        print(i+1,'/',itr)
+
+        train[i] = chmm.data_estimate(t, e)
+        test[i] =  chmm.data_estimate(tt, et)
+
+        chmm.baum_welch( t, e, 1 , est=False ,method=_method )
+
+    train[-1] = chmm.data_estimate(t, e)
+    test[-1] =  chmm.data_estimate(tt, et)
+
+    return (train,test)
+
 
 def bw_test( chmm, t, e, tt, et, _method, itr ):
-    """ return convergence line on both training (t,e) and testing datasets (tt,et)"""
+    """ return convergence line on both training (t,e) and testing datasets (tt,et) for dataset likelihood and viterbi"""
 
     train = numpy.zeros( itr+1 )
     test = numpy.zeros(  itr+1 )
@@ -951,13 +970,42 @@ def random_3diag( n, all_rand ):
 
     return hmms.CtHMM( Q,B,Pi )
 
+def states3():
+
+    s = []
+    d = []
+
+    states = 5
+    iteration = 100
+
+
+    model = random_3diag( states , False )
+    sparse = random_3diag( states , True )
+    dense =  hmms.CtHMM.random(states,states)
+
+    t,e = model.generate_data( (10,100) )
+    tt,et = model.generate_data( (100,100) )
+
+    real = model.data_estimate( t,e )
+    real_t = model.data_estimate( tt,et )
+
+
+
+    s_train, s_test = baum_welch_test( sparse, t, e, tt, et,"soft", iteration )
+    d_train, d_test = baum_welch_test( dense,  t, e, tt, et, "soft", iteration  )
+
+    print(repr(s_train/real))
+    print(repr(s_test/real_t))
+    print(repr(d_train/real))
+    print(repr(d_test/real_t))
+
 
 def states2():
 
     s = []
     d = []
 
-    rng = range(25,36,5)
+    rng = range(5,151,5)
 
     for states in rng:
 
@@ -976,17 +1024,16 @@ def states2():
         s.append( stime )
         print(states, " states -> time:" , stime )
 
-        start_time = time.time()
-        dense.baum_welch( t, e, 1 ,method="soft" )
-        dtime = time.time() - start_time
-        d.append( dtime )
+        if(states <= 75 ):
 
+            start_time = time.time()
+            dense.baum_welch( t, e, 1 ,method="soft" )
+            dtime = time.time() - start_time
+            d.append( dtime )
+            print(states, " states -> time:" , dtime )
 
-        print(states, " states -> time:" , dtime )
-
-
-    print(s)
-    print(d)
+        print(s)
+        print(d)
 
     fig = plt.figure()
 
@@ -1075,7 +1122,7 @@ def main():
     #soft_hard3()
     #states()
     #expm_test()
-    states2()
+    states3()
 
 
 if __name__ == "__main__":
