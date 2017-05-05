@@ -220,8 +220,8 @@ def cd_convergence_ex1():
         #outc = ct.baum_welch( t,e, iter_num, est=True )
 
         hidden_states = 3
-        runs = 10 #20
-        iterations = 150
+        runs = 10
+        iterations =  150
         out_dt, out_ct = hmms.multi_train_ctdt( hidden_states , t, e, runs, iterations, ret='all', method='unif')
 
         for ( m, a ) in out_ct:
@@ -246,21 +246,19 @@ def cd_convergence_ex1():
 
     ax = fig.add_subplot(111)
     #fig.subplots_adjust(top=0.85)
-    ax.set_title('Models Comparison')
 
     ax.set_xlabel('iterations')
-    ax.set_ylabel('performance')
+    ax.set_ylabel('performance ratio')
 
-    fire = mpatches.Patch(color='red', label='CT - single run')
-    olive = mpatches.Patch(color='chartreuse', label='DT - single run')
-
-    plt.legend(handles=[olive, fire ])
+    plt.legend()
 
     ## DATA PLOT
 
     for i in range(runs*models):
-        plt.plot( out_d[i][offset:]  , color="chartreuse" )
-        plt.plot( out_c[i][offset:]  , color="red" )
+        plt.plot( out_d[i][offset:]  , label='DT - single run', color = 'darkorange' )
+        plt.plot( out_c[i][offset:]  , label='CT - single run', color = 'blue' )
+
+    #plt.legend()
 
     #plt.plot( outd[1:] / dreal )
     #plt.plot( outc[1:] / dreal )
@@ -273,19 +271,16 @@ def cd_convergence_ex1():
 
     ax2 = fig2.add_subplot(111)
     #fig.subplots_adjust(top=0.85)
-    ax2.set_title('Models Comparison')
 
     ax2.set_xlabel('iterations')
-    ax2.set_ylabel('performance')
-
-    red_patch = mpatches.Patch(color='red', label='CT - average')
-    char_patch = mpatches.Patch(color='chartreuse', label='DT - average')
-    plt.legend(handles=[ char_patch, red_patch ])
+    ax2.set_ylabel('performance ratio')
 
     ## DATA PLOT
 
-    plt.plot( np.average(out_d,  axis=0)[offset:]  , color="chartreuse" )
-    plt.plot( np.average(out_c,  axis=0)[offset:]  , color="red" )
+    plt.plot( np.average(out_d,  axis=0)[offset:]  , label='DT - average', color = 'darkorange' )
+    plt.plot( np.average(out_c,  axis=0)[offset:]  , label='CT - average', color = 'blue' )
+
+    plt.legend()
 
     plt.show()
 
@@ -327,14 +322,9 @@ def cd_convergence_ex2():
     #ax.set_title('Models Comparison')
 
     ax.set_xlabel('iterations')
-    ax.set_ylabel('performance')
+    ax.set_ylabel('performance ratio')
 
-    red = mpatches.Patch(color='red', label='CT - special')
-    char = mpatches.Patch(color='chartreuse', label='DT - special')
-    fire = mpatches.Patch(color='firebrick', label='CT - random')
-    olive = mpatches.Patch(color='olivedrab', label='DT - random')
 
-    plt.legend(handles=[ char, red, olive, fire ])
 
 
 
@@ -396,12 +386,14 @@ def cd_convergence_ex2():
         #    plt.plot( out_c[i][offset:]  , color="red" )
 
         if mn < 5:
-            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="chartreuse" )
-            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="red" )
+            plt.plot( np.average(out_d,  axis=0)[offset:]  , label='DT - special', color = 'darkorange' )
+            plt.plot( np.average(out_c,  axis=0)[offset:]  , label='CT - special',color = 'blue' )
         else:
-            plt.plot( np.average(out_d,  axis=0)[offset:]  , color="olivedrab" )
-            plt.plot( np.average(out_c,  axis=0)[offset:]  , color="firebrick" )
+            plt.plot( np.average(out_d,  axis=0)[offset:]  , label='DT - random',color = 'red' )
+            plt.plot( np.average(out_c,  axis=0)[offset:]  , label='CT - random',color = 'darkblue' )
 
+
+    #plt.legend( )
 
     print("out_c")
     print(out_c)
@@ -502,38 +494,41 @@ def precision_ex():
     plt.show()
 
 
-def run_precision2( n, m, num, data_len, it_num ):
-    """Time test, parameters: n-> hidden states, m-> output symbols, num-> number of data vectors, data_len -> length of data vectors,
-                              it_num -> number of iterations for Baum-welch algorithm
-    """
-
-    chmm = hmms.CtHMM.random( n,m )
-
-    t,e = chmm.generate_data( ( num, data_len ), 1 )
-
-    chmm_i = hmms.CtHMM.random( n,m )
-    chmm_f = hmms.CtHMM( * chmm_i.params )
+def run_precision2( chmm_i, chmm_f, t, e, it_num ):
+    """Run both float and integer algorithm baum-welch"""
 
     graph_i = chmm_i.baum_welch( t, e, it_num, est=True, method="soft", fast=True )
     graph_f = chmm_f.baum_welch( t, e, it_num, est=True, method="soft", fast=False )
 
-    return (chmm_i.q, chmm_f.q)
-
 def precision_ex2():
 
-    it_num = 30
+    it_num = 50
 
-    avg = np.zeros( it_num )
+    avg = np.zeros( it_num + 1)
+    avg[0] = 0
 
     runs = 10
+
+    n = 5
+    m = 5
+    num = 10
+    data_len = 10
 
     for i in range( runs ):
         print(i)
 
+        chmm = hmms.CtHMM.random( n,m )
+
+        t,e = chmm.generate_data( ( num, data_len ), 0.1 )
+
+        chmm_i = hmms.CtHMM.random( n,m )
+        chmm_f = hmms.CtHMM( * chmm_i.params )
+
         for j in range( it_num ):
-            A,B = run_precision2( 5, 5, 10, 10, 1 )
+
+            run_precision2(chmm_i, chmm_f, t, e, 1 )
             #print(distance(A,B))
-            avg[j] = avg[j] + rel_distance(A,B)
+            avg[j] = avg[j] + rel_distance(chmm_i.q,chmm_f.q)
 
 
     avg /= runs
@@ -546,7 +541,7 @@ def precision_ex2():
     ax.set_xlabel('iteration')
     ax.set_ylabel('relative error')
 
-    plt.plot( range( it_num  ) , avg )
+    plt.plot( range( it_num + 1 ) , avg )
 
     plt.show()
 
@@ -975,7 +970,7 @@ def states3():
     s = []
     d = []
 
-    states = 5
+    states = 10
     iteration = 100
 
 
@@ -983,7 +978,7 @@ def states3():
     sparse = random_3diag( states , True )
     dense =  hmms.CtHMM.random(states,states)
 
-    t,e = model.generate_data( (10,100) )
+    t,e = model.generate_data( (100,100) )
     tt,et = model.generate_data( (100,100) )
 
     real = model.data_estimate( t,e )
@@ -1112,17 +1107,18 @@ def main():
     #for i in range(2,21,2):
     #    make_time_test_ct( i, 10, 10, 10, 10)
 
-    #cd_convergence_ex()
+    #cd_convergence_ex1()
 
     #complexity_ex4()
     #precision_ex()
     #complexity_ex4()
-    #precision_ex2()
+    precision_ex2()
 
     #soft_hard3()
     #states()
     #expm_test()
-    states3()
+
+    #states3()
 
 
 if __name__ == "__main__":
