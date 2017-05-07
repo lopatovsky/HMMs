@@ -519,12 +519,12 @@ def precision_ex2():
 
         chmm = hmms.CtHMM.random( n,m )
 
-        t,e = chmm.generate_data( ( num, data_len ), 0.1 )
+        t,e = chmm.generate_data( ( num, data_len ), 0.001 )
 
         chmm_i = hmms.CtHMM.random( n,m )
         chmm_f = hmms.CtHMM( * chmm_i.params )
 
-        for j in range( it_num ):
+        for j in range( 1,it_num+1 ):
 
             run_precision2(chmm_i, chmm_f, t, e, 1 )
             #print(distance(A,B))
@@ -637,6 +637,51 @@ def soft_hard2():
 
     plt.show()
 
+def soft_hard_simple():
+
+    Q = np.array( [[-0.375,0.125,0.25],[0.25,-0.5,0.25],[0.25,0.125,-0.375]] )
+    B = np.array( [[0.8,0.05,0.15],[0.05,0.9,0.05],[0.2,0.05,0.75]] )
+    Pi = np.array( [0.6,0,0.4] )
+
+    chmm = hmms.CtHMM( Q,B,Pi )
+
+    t,e = chmm.generate_data( (100,100) )
+
+    chmm_s = hmms.CtHMM.random( 3,3 )
+    chmm_h = hmms.CtHMM( * chmm_s.params )
+    chmm_c = hmms.CtHMM( * chmm_s.params )
+
+    print("comb")
+    #graph_comb = chmm_c.baum_welch( t, e, 5, est=True, method="hard" )
+    #graph_comb = np.append( graph_comb,  chmm_c.baum_welch( t, e, 95, est=True, method="soft" ) )
+    print("hard")
+    graph_hard = chmm_h.baum_welch( t, e, 100, est=True, method="hard" )
+    print("soft")
+    graph_soft = chmm_s.baum_welch( t, e, 100, est=True, method="soft" )
+
+
+    real = chmm.data_estimate( t,e )
+    #real = 0
+    #for tt,ee in zip(t,e):
+    #   x,_ = chmm.viterbi( tt, ee )
+    #    real += x
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('iterations')
+    ax.set_ylabel('performance ratio')
+    #For better visibility of the graph, we cut first two values.
+    plt.plot( graph_soft[1:] / real, color = 'blue' , label = "soft method" )
+    plt.plot( graph_hard[1:] / real, color = 'darkorange', label = "hard method"   )
+
+    plt.legend()
+
+
+    ##plt.plot( graph_comb[1:-1] / real, color="purple")
+
+    plt.show()
+
+
 def baum_welch_test( chmm, t, e, tt, et, _method, itr ):
     """ return convergence line on both training (t,e) and testing datasets (tt,et) for dataset likelihood and viterbi"""
 
@@ -692,9 +737,11 @@ def soft_hard3():
     chmm = hmms.CtHMM( Q,B,Pi )
 
     st = 3
-    obs = 3
+    obs =3
+    #chmm = hmms.CtHMM.random( st, obs )
 
-    itr = 50+1
+
+    itr = 100+1
 
     s = numpy.zeros( (4,itr+1) )
     h = numpy.zeros( (4,itr+1) )
@@ -710,7 +757,7 @@ def soft_hard3():
 
         #chmm = hmms.CtHMM.random(st,obs)
         t,e = chmm.generate_data( (25,25) )
-        tt,et = chmm.generate_data( (100,100) ) #test dataset
+        tt,et = chmm.generate_data( (2,2) ) #test dataset
 
         rsum[0] = chmm.data_estimate( t,e )
         rsum[2] = prob_vit( chmm, t, e )
@@ -722,7 +769,7 @@ def soft_hard3():
         chmm_h = hmms.CtHMM( * chmm_s.params )
 
         s_temp = bw_test(chmm_s,t,e,tt,et,"soft",itr)
-        h_temp = bw_test(chmm_s,t,e,tt,et,"hard",itr)
+        h_temp = bw_test(chmm_h,t,e,tt,et,"hard",itr)
 
         for i in range(4):
             s[i] += s_temp[i] / rsum[i]
@@ -970,7 +1017,7 @@ def states3():
     s = []
     d = []
 
-    states = 10
+    states = 30
     iteration = 100
 
 
@@ -1094,6 +1141,17 @@ def expm_test():
 
     plt.show()
 
+def empty():
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlabel('most probable sequence by the original model')
+    ax.set_ylabel('performance')
+
+    fig.show()
+
+    input()
+
 
 def main():
 
@@ -1112,11 +1170,14 @@ def main():
     #complexity_ex4()
     #precision_ex()
     #complexity_ex4()
-    precision_ex2()
+    #precision_ex2()
 
+    #soft_hard_simple()
     #soft_hard3()
     #states()
     #expm_test()
+
+    empty()
 
     #states3()
 
