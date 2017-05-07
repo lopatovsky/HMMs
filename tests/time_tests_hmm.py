@@ -1047,7 +1047,7 @@ def states2():
     s = []
     d = []
 
-    rng = range(5,151,5)
+    rng = range(135 ,255,5)
 
     for states in rng:
 
@@ -1174,10 +1174,10 @@ def main():
 
     #soft_hard_simple()
     #soft_hard3()
-    #states()
+    states2()
     #expm_test()
 
-    empty()
+    #empty()
 
     #states3()
 

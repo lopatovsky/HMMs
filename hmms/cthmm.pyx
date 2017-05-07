@@ -24,8 +24,9 @@ cdef class CtHMM(hmm.HMM):
     cdef numpy.ndarray _q
 
     cdef dict tmap
+    cdef dict emap
     cdef float_t [:,:,:] _pt
-    cdef float_t [:,:,:,:] _n_exp
+    cdef float_t [:,:,:] _n_exp
 
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
@@ -103,6 +104,7 @@ cdef class CtHMM(hmm.HMM):
             self.check_row( row, 'b')
         for row in scipy.linalg.expm(self.q):
             self.check_row( row, 'q')
+        if self._q.shape[0] < 2: raise ValueError("The number of hidden states must be the number >= 2.")
 
     def get_dthmm_params( self, time_step = 1 ):
         """Transform the jump rate matrix to transition matrix for discrete time of length time_step"""
@@ -304,25 +306,35 @@ cdef class CtHMM(hmm.HMM):
         cdef i,j
         cdef float_t [:,:] temp = numpy.empty( (2*s_num,2*s_num) , dtype=numpy.float64 )
 
-        self._n_exp = numpy.empty( (s_num, s_num, 2*s_num, 2*s_num) , dtype=numpy.float64 )
+        cdef int nonzero = 0
+        for i in range(s_num):
+            for j in range( s_num ):
+                if self._q[i,j] != 0: nonzero += 1
+
+        self._n_exp = numpy.empty( ( nonzero , 2*s_num, 2*s_num) , dtype=numpy.float64 )
+
+        cdef int cnt = 0
+        self.emap = {}
 
         for i in range(s_num):
             for j in range( s_num ):
 
                 if self._q[i,j] == 0 : continue;
 
+                self.emap[ i*s_num + j ] = cnt  #map <pair,int> sparing space for sparse matrices
+
                 A[i,s_num + j] = 1  # set the subpart matrix B
-
-
 
                 start_time = time.time()
                 temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
                 self.t2 += time.time() - start_time
 
 
-                self._n_exp[i,j,:,:] = temp
+                self._n_exp[ cnt,:,:] = temp
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
+
+                cnt += 1
 
     cdef _prepare_matrices_n_exp_for_float( self , float_t tm ):
         """Will pre-count integrals $\int_0^t( e^{Qx}_{k,i} e^{Q(t-x)}_{j,l} dx$ for any states $i,j,k,l \in$ hidden states """
@@ -339,12 +351,25 @@ cdef class CtHMM(hmm.HMM):
         cdef i,j
         cdef float_t [:,:] temp = numpy.empty( (2*s_num,2*s_num) , dtype=numpy.float64 )
 
-        self._n_exp = numpy.empty( (s_num, s_num, 2*s_num, 2*s_num) , dtype=numpy.float64 )
+        cdef int nonzero = 0
+        for i in range(s_num):
+            for j in range( s_num ):
+                if self._q[i,j] != 0: nonzero += 1
+
+        self._n_exp = numpy.empty( ( nonzero , 2*s_num, 2*s_num) , dtype=numpy.float64 )
+
+        cdef int cnt = 0
+        self.emap = {}
+
 
         for i in range(s_num):
             for j in range( s_num ):
 
                 if self._q[i,j] == 0 : continue;
+
+                self.emap[ i*s_num + j ] = cnt  #map <pair,int> sparing space for sparse matrices
+
+
 
                 A[i,s_num + j] = tm  # set the subpart matrix B
 
@@ -352,10 +377,12 @@ cdef class CtHMM(hmm.HMM):
                 temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
                 self.t2 += time.time() - start_time
 
-                self._n_exp[i,j,:,:] = temp
+                self._n_exp[cnt,:,:] = temp
 
 
                 A[i,s_num + j] = 0  # zero the subpart matrix B
+
+                cnt += 1
 
     cpdef numpy.ndarray[float_t, ndim=2] forward(self,  times ,numpy.ndarray[int_t, ndim=1] emissions):
         """Method for the single call of forward algorithm"""
@@ -703,7 +730,7 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, obs_sum, eta, tA, temp
         cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
-        cdef int it,i,j,k,l,map_time,ix,seq_num, tmi
+        cdef int cnt,it,i,j,k,l,map_time,ix,seq_num, tmi
         cdef float_t interval, tm
 
         #start_time = time.time()
@@ -833,10 +860,12 @@ cdef class CtHMM(hmm.HMM):
 #                            print(i,j, numpy.asarray(self._n_exp[i,j]))
 #                            print("t1",temp)
 
+                        cnt = self.emap[ i*s_num + j ]
+
                         ##doesn't work - > temp = numpy.asarray(self._n_exp[i,j,:,:])
                         for k in range(s_num*2):
                             for l in range(s_num*2):
-                                temp[k,l] = self._n_exp[i,j,k,l]
+                                temp[k,l] = self._n_exp[ cnt ,k,l]
 
 
                         #temp = numpy.full( (s_num*2,s_num*2), 4.25 )
