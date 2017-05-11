@@ -328,9 +328,27 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
+    cdef dataset_check( self, s_seqs, e_seqs ):
+        mx = 0
+
+        print(s_seqs)
+
+        for s in s_seqs:
+            print(s)
+            mx = max( mx, numpy.max(s) )
+        if mx >= self._logb.shape[0]:
+                raise ValueError("Data has more hidden states than model. ", mx+1," vs ", self._logb.shape[0])
+        mx = 0
+        for s in e_seqs:
+            mx = max( mx, numpy.max(s) )
+        if mx >= self._logb.shape[1]:
+                raise ValueError("Data has more hidden states than model. ", mx+1," vs ", self._logb.shape[1])
 
     cpdef maximum_likelihood_estimation( self, s_seqs, e_seqs ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
+
+        self.dataset_check( s_seqs, e_seqs )
+
 
         cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_last, sum_all, ss, es
         cdef numpy.ndarray[int_t, ndim=2] sum_move, sum_emit
@@ -349,14 +367,27 @@ cdef class DtHMM:
         sum_move = numpy.zeros( (s_num,s_num ) , dtype=numpy.int64)
         sum_emit = numpy.zeros( (s_num,o_num ) , dtype=numpy.int64)
 
+
+
         for ss,es in zip( s_seqs, e_seqs):
+
+
+            print("ss",ss)
+            print("es",es)
+
 
             sum_0[ss[0]]+= 1
             sum_all[ss[0]]+= 1
             sum_emit[ ss[0], es[0] ]+=1
             sum_last[ ss[-1] ]+=1
 
+            #print(ss.shape[0])
+            print(ss.size)
+
             for it in range(1, ss.size ):
+                print("it",it)
+                print("ss",ss[it])
+
 
                 sum_all[ ss[it] ]+=1
                 sum_move[ ss[it-1], ss[it] ]+=1

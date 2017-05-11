@@ -1,4 +1,5 @@
-import hmms
+
+aimport hmms
 import pytest
 import numpy
 
