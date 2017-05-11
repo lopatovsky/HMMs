@@ -1205,29 +1205,18 @@ def mle_c():
     chmm_g = hmms.CtHMM.random(3,3)
     t,s,e = chmm_g.generate_data( ( 100, 100 ), states=True )
 
+    real = chmm_g.full_data_estimate(s,t,e)
+    print( "real", real )
+
     chmm = hmms.CtHMM.random(3,3)
-    print( "g1", chmm_g.full_data_estimate(s,t,e) )
-    print( "e1", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
 
+    graph = chmm.maximum_likelihood_estimation(s,t,e,100,est=True)
+    print( graph )
 
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
-    chmm.maximum_likelihood_estimation(s,t,e)
-    print( "e2", chmm.full_data_estimate(s,t,e) )
+    plt.plot( graph / real )
+    plt.show()
+    input()
+
 
 def main():
 

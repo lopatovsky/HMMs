@@ -408,7 +408,14 @@ cdef class CtHMM(hmm.HMM):
             sm += self.emission_estimate( t,row )
         return sm
 
-    cpdef float_t full_data_estimate( self, state_seqs, times, emissions ):
+    cpdef float_t full_data_estimate( self, s_seqs, t_seqs, e_seqs ):
+        """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
+           Emission and state sequences can be given as numpy matrix or list of numpy vectors
+        """
+        self._prepare_matrices_pt( t_seqs )
+        return self._full_data_estimate( s_seqs, t_seqs, e_seqs )
+
+    cpdef float_t _full_data_estimate( self, state_seqs, times, emissions ):
         """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
            Emission and state sequences can be given as numpy matrix or list of numpy vectors
         """
@@ -416,7 +423,7 @@ cdef class CtHMM(hmm.HMM):
         cdef float_t sm = 0
 
         for  s,t,e in zip( state_seqs, times, emissions ):
-            sm += self.estimate( s, t, e )
+            sm += self._estimate( s, t, e )
         return sm
 
     cpdef float_t estimate(self, numpy.ndarray[int_t, ndim=1] states, times ,numpy.ndarray[int_t, ndim=1] emissions):
@@ -662,7 +669,16 @@ cdef class CtHMM(hmm.HMM):
                 if t[i] <= t[i-1]:
                     raise ValueError("Time sequence must be growing.")
 
-    cpdef maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs ):
+
+    def maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs, iteration = 10, **kvargs ):
+
+        if 'est' not in kvargs: kvargs['est'] = False
+        if 'fast' not in kvargs: kvargs['fast'] = True
+
+        return self._maximum_likelihood_estimation( s_seqs, t_seqs, e_seqs, kvargs['est'], kvargs['fast'], iteration )
+
+
+    cpdef _maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs, est, fast, iterations ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
 
         self._seqs_check( s_seqs,  self._logb.shape[0], "Data has more hidden states than model. " )
@@ -700,8 +716,6 @@ cdef class CtHMM(hmm.HMM):
 
 
         ##### Q #####
-        fast = True
-        iterations = 10 # TODO as params
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, gamma_full_sum, tau, graph
         cdef numpy.ndarray[float_t, ndim=2] gamma, eta, tA, temp
@@ -712,9 +726,8 @@ cdef class CtHMM(hmm.HMM):
         if isinstance(e_seqs, list): seq_num = len(e_seqs)  #list of numpy vectors
         else: seq_num = e_seqs.shape[0]                   #numpy matrix
 
-        #TODO if est:
-        #    graph = numpy.zeros(iterations+1)
-        #    #graph2 = numpy.zeros(iterations+1) #frozen feature
+        if est:
+            graph = numpy.zeros(iterations+1)
 
         for it in range( iterations ):
 
@@ -726,6 +739,9 @@ cdef class CtHMM(hmm.HMM):
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
+            if est:
+                graph[it] = self._full_data_estimate(s_seqs,t_seqs,e_seqs)
+
             for t , ss, es in zip( t_seqs , s_seqs, e_seqs):
 
 
@@ -734,8 +750,7 @@ cdef class CtHMM(hmm.HMM):
                 gamma = self._get_hard_table( ss )
                 ksi = self._get_double_hard_table( ss )
 
-                ##if est:  TODO full expectation
-                #    graph[it] += self.log_sum( alpha[-1,:] )
+
 
 
                 #sum the ksi with same time interval together
@@ -816,10 +831,8 @@ cdef class CtHMM(hmm.HMM):
             for i in range( s_num ):
                 self._q[i,i] = - numpy.sum( self._q[i,:] )
 
-
-        ###TODO for full estimation if est:
-        #    graph[iterations] = self.data_estimate(t_seqs, e_seqs)
-        #    return graph
+        graph[iterations] = self._full_data_estimate(s_seqs,t_seqs,e_seqs)
+        return graph
 
 
 
@@ -858,11 +871,9 @@ cdef class CtHMM(hmm.HMM):
         if kvargs['method'] == "hard": method = 1
         return self._baum_welch( times, data, kvargs['est'], kvargs['fast'], iteration, method )
 
-
-    #TODO rename and change doc
     cdef _baum_welch(self, times, data, int est, int fast, int iterations, int met ):
         """Estimate parameters by Baum-Welch algorithm.
-           Input array data is the numpy array of observation sequences.
+           Input array data is 2D numpy array or list of numpy arrays of observation and time sequences.
         """
 
         self._seqs_check( times,  self._logb.shape[1], "Data has more observation symbols than model. " )
