@@ -1181,6 +1181,53 @@ def mle():
 
     hmms.print_parameters(dhmm2)
 
+def mle_c2():
+
+    s = [ np.array( [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1] ) ,
+         np.array( [0, 1, 0, 0, 1, 0, 1 ] ),
+         np.array( [2, 0, 1, 0, 2, 0, 0, 0, 0, 0] ) ]
+    e = [ np.array( [0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1] ) ,
+         np.array( [0, 1, 0, 0, 1, 0, 1 ] ),
+         np.array( [2, 0, 1, 0, 2, 0, 0, 0, 0, 0] ) ]
+    t = [ np.array( [0, 2, 4, 5, 8, 11, 14, 16, 17, 19, 21, 23] ) ,
+         np.array( [0, 1, 4, 6, 9, 10, 11 ] ),
+         np.array( [0, 4, 8, 10, 12, 16, 17, 18, 19, 20] ) ]
+
+    chmm = hmms.CtHMM.random(3,3)
+    print( "e1", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+
+
+def mle_c():
+
+    chmm_g = hmms.CtHMM.random(3,3)
+    t,s,e = chmm_g.generate_data( ( 100, 100 ), states=True )
+
+    chmm = hmms.CtHMM.random(3,3)
+    print( "g1", chmm_g.full_data_estimate(s,t,e) )
+    print( "e1", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+
+
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
+    chmm.maximum_likelihood_estimation(s,t,e)
+    print( "e2", chmm.full_data_estimate(s,t,e) )
 
 def main():
 
@@ -1210,7 +1257,7 @@ def main():
 
     #states3()
 
-    mle()
+    mle_c()
 
 
 if __name__ == "__main__":

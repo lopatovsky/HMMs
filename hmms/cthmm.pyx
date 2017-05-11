@@ -654,12 +654,15 @@ cdef class CtHMM(hmm.HMM):
 
     cdef _time_seqs_check( self, t_seqs ):
 
+        if isinstance(t_seqs, list): seq_num = len(t_seqs)  #list of numpy vectors
+        else: seq_num = t_seqs.shape[0]
+
         for t in t_seqs:
-            for i in range(1,t_seqs.size):
+            for i in range(1,seq_num):
                 if t[i] <= t[i-1]:
                     raise ValueError("Time sequence must be growing.")
 
-    cpdef maximum_likelihood_estimation( self, t_seqs, s_seqs, e_seqs ):
+    cpdef maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
 
         self._seqs_check( s_seqs,  self._logb.shape[0], "Data has more hidden states than model. " )
@@ -671,7 +674,7 @@ cdef class CtHMM(hmm.HMM):
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
-        cdef int seq_num,it
+        cdef int seq_num, it
 
 
         if isinstance(s_seqs, list): seq_num = len(s_seqs)  #list of numpy vectors
@@ -696,7 +699,128 @@ cdef class CtHMM(hmm.HMM):
         self._logb  = numpy.log( (sum_emit.T / sum_all).T )
 
 
-        #Q TODO
+        ##### Q #####
+        fast = True
+        iterations = 10 # TODO as params
+
+        cdef numpy.ndarray[float_t, ndim=1] gamma_sum, gamma_full_sum, tau, graph
+        cdef numpy.ndarray[float_t, ndim=2] gamma, eta, tA, temp
+        cdef numpy.ndarray[float_t, ndim=3] ksi, ksi_sum
+        cdef int cnt,i,j,k,l,map_time,ix, tmi
+        cdef float_t interval, tm
+
+        if isinstance(e_seqs, list): seq_num = len(e_seqs)  #list of numpy vectors
+        else: seq_num = e_seqs.shape[0]                   #numpy matrix
+
+        #TODO if est:
+        #    graph = numpy.zeros(iterations+1)
+        #    #graph2 = numpy.zeros(iterations+1) #frozen feature
+
+        for it in range( iterations ):
+
+            print("it",it)
+
+            self._prepare_matrices_pt( t_seqs )
+
+            ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
+            gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
+            gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
+
+            for t , ss, es in zip( t_seqs , s_seqs, e_seqs):
+
+
+                # for MLE algorithm doesn't exist soft and hard method, because the state sequence is given and so do not need to be guessed by viterbi or extimated by forward-backward algorithm.
+
+                gamma = self._get_hard_table( ss )
+                ksi = self._get_double_hard_table( ss )
+
+                ##if est:  TODO full expectation
+                #    graph[it] += self.log_sum( alpha[-1,:] )
+
+
+                #sum the ksi with same time interval together
+                for tmi in range( t.shape[0] - 1 ):
+
+                    interval = t[tmi+1]-t[tmi]
+                    map_time = self.tmap[ interval ]
+
+                    for i in range(s_num):
+                        for j in range( s_num ):
+                            ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tmi,i,j] )
+
+
+                #expected number of visiting state i
+                for i in range( s_num ):
+                    gamma_sum[i] = self.log_sum( gamma[:,i] )
+
+                #sum gamma to the whole dataset array
+                for i in range ( s_num ):
+                    gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
+
+
+
+            tau = numpy.zeros( (s_num), dtype=numpy.float64 )
+            eta = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
+
+            tA = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
+
+            temp = numpy.empty( (s_num*2,s_num*2), dtype=numpy.float64 )
+
+            if fast:
+                self._prepare_matrices_n_exp()
+
+            for tm, ix in self.tmap.items():  #iterate trough all the different time intervals
+
+                if( tm != int(tm) or fast==0):
+                    self._prepare_matrices_n_exp_for_float(tm)
+
+                for i in range(s_num):
+                    for j in range( s_num ):
+
+                        if self._q[i,j] == 0 : continue;  #impossible to jump from state i to state j
+
+                        cnt = self.emap[ i*s_num + j ]
+
+                        for k in range(s_num*2):
+                            for l in range(s_num*2):
+                                temp[k,l] = self._n_exp[ cnt ,k,l]
+
+
+                        if( tm == int(tm) and fast  ):
+                            start_time = time.time()
+                            tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
+                            self.t3 += time.time() - start_time
+                        else:
+                            tA = temp[:s_num,s_num:]
+
+
+                        if i == j:
+
+                            tA /= self._pt[ ix ]
+                            tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )   #tau is not in log prob anymore.
+
+                        else:
+                            tA *= self._q[i,j]
+                            tA /= self._pt[ ix ]
+                            eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #eta is not in log prob anymore.
+
+            #Update parameter Q:
+
+            self._q = ( eta.T / tau ).T
+
+            self._q = numpy.nan_to_num(self._q)   # nan can appear, when some of the states is not reachable
+
+            if sum( self._q.flatten() ) == 0:
+                raise ValueError("Parameter error! Matrix Q can't contain unreachable states.")
+
+            for i in range( s_num ):
+                self._q[i,i] = - numpy.sum( self._q[i,:] )
+
+
+        ###TODO for full estimation if est:
+        #    graph[iterations] = self.data_estimate(t_seqs, e_seqs)
+        #    return graph
+
 
 
 
