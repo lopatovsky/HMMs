@@ -328,26 +328,19 @@ cdef class DtHMM:
 
         return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
 
-    cdef dataset_check( self, s_seqs, e_seqs ):
-        mx = 0
+    cdef _seqs_check( self, seqs, num , error_string ):
 
-        print(s_seqs)
-
-        for s in s_seqs:
-            print(s)
-            mx = max( mx, numpy.max(s) )
-        if mx >= self._logb.shape[0]:
-                raise ValueError("Data has more hidden states than model. ", mx+1," vs ", self._logb.shape[0])
         mx = 0
-        for s in e_seqs:
+        for s in seqs:
             mx = max( mx, numpy.max(s) )
-        if mx >= self._logb.shape[1]:
-                raise ValueError("Data has more hidden states than model. ", mx+1," vs ", self._logb.shape[1])
+        if mx >= num:
+                raise ValueError( error_string, mx+1," vs ", num )
 
     cpdef maximum_likelihood_estimation( self, s_seqs, e_seqs ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
 
-        self.dataset_check( s_seqs, e_seqs )
+        self._seqs_check( s_seqs,  self._logb.shape[0], "Data has more hidden states than model. " )
+        self._seqs_check( e_seqs,  self._logb.shape[1], "Data has more observation symbols than model. " )
 
 
         cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_last, sum_all, ss, es
@@ -367,27 +360,14 @@ cdef class DtHMM:
         sum_move = numpy.zeros( (s_num,s_num ) , dtype=numpy.int64)
         sum_emit = numpy.zeros( (s_num,o_num ) , dtype=numpy.int64)
 
-
-
         for ss,es in zip( s_seqs, e_seqs):
-
-
-            print("ss",ss)
-            print("es",es)
-
 
             sum_0[ss[0]]+= 1
             sum_all[ss[0]]+= 1
             sum_emit[ ss[0], es[0] ]+=1
             sum_last[ ss[-1] ]+=1
 
-            #print(ss.shape[0])
-            print(ss.size)
-
             for it in range(1, ss.size ):
-                print("it",it)
-                print("ss",ss[it])
-
 
                 sum_all[ ss[it] ]+=1
                 sum_move[ ss[it-1], ss[it] ]+=1
@@ -396,6 +376,7 @@ cdef class DtHMM:
         self._logpi = numpy.log( sum_0 / seq_num )
         self._loga  = numpy.log( (sum_move.T / (sum_all-sum_last ) ).T )
         self._logb  = numpy.log( (sum_emit.T / sum_all).T )
+
 
 
 
@@ -420,15 +401,13 @@ cdef class DtHMM:
 
         self._baum_welch( data, False, iteration )
 
-
-    #TODO - a bit useless restriction on 2d matrix of data, if they do not need to have some length at all.
-    #TODO2 - change default value to -1 - convergence
-    #TODO3 - examine if warning  can cause some problems "/home/jamaisvu/Desktop/CT-DtHMM/tests/test_hmm.py:160: RuntimeWarning: divide by zero encountered in log"
-
     cpdef _baum_welch(self, data, int est, iterations = 10 ):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
+
+        self._seqs_check( data,  self._logb.shape[1], "Data has more observation symbols than model. " )
+
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum
         cdef numpy.ndarray[int_t, ndim=1] row
         cdef numpy.ndarray[float_t, ndim=2] alpha, beta, gamma, ksi_sum, obs_sum

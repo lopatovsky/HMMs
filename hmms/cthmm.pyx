@@ -644,14 +644,30 @@ cdef class CtHMM(hmm.HMM):
 
         return ksi
 
+    cdef _seqs_check( self, seqs, num , error_string ):
 
-    cpdef maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs ):
+        mx = 0
+        for s in seqs:
+            mx = max( mx, numpy.max(s) )
+        if mx >= num:
+                raise ValueError( error_string, mx+1," vs ", num )
+
+    cdef _time_seqs_check( self, t_seqs ):
+
+        for t in t_seqs:
+            for i in range(1,t_seqs.size):
+                if t[i] <= t[i-1]:
+                    raise ValueError("Time sequence must be growing.")
+
+    cpdef maximum_likelihood_estimation( self, t_seqs, s_seqs, e_seqs ):
         """Given dataset of state and emission sequences estimate the most likely parameters."""
 
-        cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_all, ss, es
-        cdef numpy.ndarray[float_t, ndim=1] sum_tau
-        cdef numpy.ndarray[int_t, ndim=2] sum_emit
-        cdef numpy.ndarray[float_t, ndim=2] sum_eta
+        self._seqs_check( s_seqs,  self._logb.shape[0], "Data has more hidden states than model. " )
+        self._seqs_check( e_seqs,  self._logb.shape[1], "Data has more observation symbols than model. " )
+        self._time_seqs_check( t_seqs )
+
+        cdef numpy.ndarray[int_t, ndim=1] sum_0, sum_last, sum_all, ss, es
+        cdef numpy.ndarray[int_t, ndim=2] sum_move, sum_emit
 
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
@@ -662,10 +678,8 @@ cdef class CtHMM(hmm.HMM):
         else: seq_num = s_seqs.shape[0]
 
         sum_0 =    numpy.zeros  ( s_num , dtype=numpy.int64)
-        sum_tau = numpy.zeros  ( s_num , dtype=numpy.float64)
         sum_all =  numpy.zeros  ( s_num , dtype=numpy.int64)
-        sum_eta = numpy.zeros( (s_num,s_num ) , dtype=numpy.float64)
-        sum_emit = numpy.zeros( (s_num,o_num ) , dtype=numpy.int64)
+        sum_emit = numpy.zeros  ( (s_num,o_num ) , dtype=numpy.int64)
 
         for ss,es in zip( s_seqs, e_seqs):
 
@@ -673,15 +687,16 @@ cdef class CtHMM(hmm.HMM):
             sum_all[ss[0]]+= 1
             sum_emit[ ss[0], es[0] ]+=1
 
-
             for it in range(1, ss.size ):
 
                 sum_all[ ss[it] ]+=1
                 sum_emit[ ss[it], es[it] ]+=1
 
         self._logpi = numpy.log( sum_0 / seq_num )
-        #self._loga  = numpy.log( (sum_move.T / (sum_all-sum_last ) ).T )
         self._logb  = numpy.log( (sum_emit.T / sum_all).T )
+
+
+        #Q TODO
 
 
 
@@ -725,6 +740,9 @@ cdef class CtHMM(hmm.HMM):
         """Estimate parameters by Baum-Welch algorithm.
            Input array data is the numpy array of observation sequences.
         """
+
+        self._seqs_check( times,  self._logb.shape[1], "Data has more observation symbols than model. " )
+        self._time_seqs_check( data )
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph, graph2
         cdef numpy.ndarray[int_t, ndim=1] row

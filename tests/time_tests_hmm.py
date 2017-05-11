@@ -1153,6 +1153,7 @@ def empty():
     input()
 
 def mle():
+    """TODO move it to the tests"""
 
     data_l = [ np.array( [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1] ) ,
          np.array( [0, 1, 0, 0, 1, 0, 1 ] ),
@@ -1164,7 +1165,7 @@ def mle():
 
 
     dhmm1 = hmms.DtHMM.random( 3,3 )
-    dhmm2 = hmms.DtHMM.random( 2,3 )
+    dhmm2 = hmms.DtHMM.random( 3,3 )
 
 
     #s,e = dhmm1.generate_data( (100,100), states=True )
