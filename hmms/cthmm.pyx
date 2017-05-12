@@ -246,9 +246,6 @@ cdef class CtHMM(hmm.HMM):
         cdef numpy.ndarray[float_t, ndim=2] q = self._q
         cdef float_t [:,:] pt = numpy.empty( (q.shape[0],q.shape[0]) , dtype=numpy.float64 )
 
-        #print("p",self._q)
-
-
         cdef int max_len = 0, seq_num
         for vector in times:
             max_len += vector.shape[0] - 1
