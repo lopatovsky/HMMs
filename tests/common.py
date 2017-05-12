@@ -71,3 +71,10 @@ def float_equal_mat( A , B, eps = EPS):
             print("Do not equal!")
             return False
     return True
+
+def numpy_to_list( A ):
+    l = []
+    for row in A:
+        l.append(row)
+
+    return l

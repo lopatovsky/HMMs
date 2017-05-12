@@ -207,6 +207,37 @@ def test_growing_likelihood_mle(h_states, o_symbols, data_num, data_len):
     assert float_equal_mat( graph, numpy.sort( graph )  )
 
 
+def test_mle_uneven_sequences_length():
+    """Test if different inputs methods hold the same results"""
+    chmm = hmms.CtHMM.random( 5, 7 )
+    t_seqs, s_seqs, e_seqs = chmm.generate_data( (10,10), states=True )
+    t_seqs2 = numpy_to_list( t_seqs )
+    s_seqs2 = numpy_to_list( s_seqs )
+    e_seqs2 = numpy_to_list( e_seqs )
+
+    chmm_r = hmms.CtHMM.random(5,7)
+    chmm_r2 = hmms.CtHMM( * chmm_r.params )
+    graph = chmm_r.maximum_likelihood_estimation(s_seqs,t_seqs,e_seqs,15,est=True )
+    graph2 = chmm_r2.maximum_likelihood_estimation(s_seqs2,t_seqs2,e_seqs2,15,est=True )
+
+    assert float_equal_mat( graph, graph2  )
+
+def test_bw_uneven_sequences_length():
+    """The likelihood in the EM algorithm had always to grow"""
+
+    cthmm = hmms.CtHMM.random( 7, 5 )
+    t, e = cthmm.generate_data( ( 10, 8 ) )
+    t2 = numpy_to_list(t)
+    e2 = numpy_to_list(e)
+
+    cthmm_t = hmms.CtHMM.random( 7, 5 )
+    cthmm_t2 = hmms.CtHMM( * cthmm_t.params  )
+    dl = cthmm_t.baum_welch( t,e,15, est=True )
+    dl2 = cthmm_t2.baum_welch( t2,e2,15, est=True )
+
+    assert float_equal_mat( dl, dl2  )
+
+
 def test_baum_welch( train_data, cthmm, out_params ):
     """This is just the consistency test, do not ensure right computations"""
     t,e = train_data
