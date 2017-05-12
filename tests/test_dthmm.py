@@ -1,5 +1,4 @@
-
-aimport hmms
+import hmms
 import pytest
 import numpy
 
@@ -186,7 +185,7 @@ def test_baum_welch_small( small_random_hmm, hmm_small_out ):
     """Test if baum_welch algorithm converge to the right parameters"""
     hmm = small_random_hmm
     data = numpy.array([[0,1,1]]);
-    hmm.baum_welch( data , 20 )
+    hmm.baum_welch( data , 200 )
 
     assert compare_parameters( hmm, hmm_small_out, 1e-2 )
 
@@ -249,4 +248,31 @@ def test_mle_big( ):
     hmm = hmms.DtHMM.random(2,5)
     states, seq = hmm.generate_data( ( 1,1000 ) );
     hmm.maximum_likelihood_estimation(states, seq)
+
+@pytest.mark.parametrize(
+    ['h_states', 'o_symbols', 'data_num', 'data_len'],
+    [(3, 3, 20, 20),
+     (2, 1, 20, 20),
+     (2, 10, 20, 20),
+     (10, 1, 20, 20),
+     (5, 5, 1, 50),
+     (5, 7, 3, 25),
+     (5, 3, 3, 25),
+     (5, 5, 25, 2),
+     (10, 10, 5, 5),
+    ],
+)
+def test_growing_likelihood_mle(h_states, o_symbols, data_num, data_len):
+    """The likelihood in the MLE algorithm had always to be bigger or equal to original sequence"""
+    dhmm = hmms.DtHMM.random(h_states,o_symbols)
+    s_seqs , e_seqs = dhmm.generate_data( (data_num,data_len) )
+
+    dhmm_r = hmms.DtHMM.random(h_states,o_symbols)
+
+    dhmm_r.maximum_likelihood_estimation(s_seqs,e_seqs)
+
+    log_est =     dhmm.full_data_estimate  ( s_seqs, e_seqs )
+    log_est_mle = dhmm_r.full_data_estimate( s_seqs, e_seqs )
+
+    assert log_est_mle >= log_est
 
