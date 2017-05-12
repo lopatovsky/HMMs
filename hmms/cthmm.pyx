@@ -658,11 +658,8 @@ cdef class CtHMM(hmm.HMM):
 
     cdef _time_seqs_check( self, t_seqs ):
 
-        if isinstance(t_seqs, list): seq_num = len(t_seqs)  #list of numpy vectors
-        else: seq_num = t_seqs.shape[0]
-
         for t in t_seqs:
-            for i in range(1,seq_num):
+            for i in range(1,t.shape[0]):
                 if t[i] <= t[i-1]:
                     raise ValueError("Time sequence must be growing.")
 

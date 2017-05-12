@@ -159,11 +159,11 @@ def out_params():
      (2, 1, 20, 20),
      (2, 10, 20, 20),
      (10, 1, 20, 20),
-     (5, 5, 1, 200),
-     (5, 7, 3, 50),
-     (5, 3, 3, 50),
-     (5, 5, 50, 2),
-     (20, 20, 5, 10),
+     (5, 5, 1, 50),
+     (5, 7, 3, 25),
+     (5, 3, 3, 25),
+     (5, 5, 25, 2),
+     (10, 10, 5, 5),
     ],
 )
 def test_growing_likelihood(h_states, o_symbols, data_num, data_len):
@@ -180,6 +180,31 @@ def test_growing_likelihood(h_states, o_symbols, data_num, data_len):
     #print(dl)
 
     assert float_equal_mat( dl, numpy.sort( dl )  )
+
+
+@pytest.mark.parametrize(
+    ['h_states', 'o_symbols', 'data_num', 'data_len'],
+    [(3, 3, 20, 20),
+     (2, 1, 20, 20),
+     (2, 10, 20, 20),
+     (10, 1, 20, 20),
+     (5, 5, 1, 50),
+     (5, 7, 3, 25),
+     (5, 3, 3, 25),
+     (5, 5, 25, 2),
+     (10, 10, 5, 5),
+    ],
+)
+def test_growing_likelihood_mle(h_states, o_symbols, data_num, data_len):
+    """The likelihood in the EM algorithm had always to grow"""
+
+    chmm = hmms.CtHMM.random( h_states, o_symbols )
+    t_seqs, s_seqs, e_seqs = chmm.generate_data( (data_num,data_len), states=True )
+
+    chmm_r = hmms.CtHMM.random(h_states,o_symbols)
+    graph = chmm_r.maximum_likelihood_estimation(s_seqs,t_seqs,e_seqs,15,est=True )
+
+    assert float_equal_mat( graph, numpy.sort( graph )  )
 
 
 def test_baum_welch( train_data, cthmm, out_params ):
