@@ -879,8 +879,8 @@ cdef class CtHMM(hmm.HMM):
            Input array data is 2D numpy array or list of numpy arrays of observation and time sequences.
         """
 
-        self._seqs_check( times,  self._logb.shape[1], "Data has more observation symbols than model. " )
-        self._time_seqs_check( data )
+        self._seqs_check( data,  self._logb.shape[1], "Data has more observation symbols than model. " )
+        self._time_seqs_check( times )
 
         cdef numpy.ndarray[float_t, ndim=1] gamma_sum, pi_sum, gamma_full_sum, gamma_part_sum, tau, graph, graph2
         cdef numpy.ndarray[int_t, ndim=1] row
