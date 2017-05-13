@@ -36,7 +36,14 @@ cdef class DtHMM:
         return( self.a, self.b, self.pi )
 
     def __init__(self, A,B,Pi):
-        """Initialize the DtHMM by given parameters."""
+        """Initialize the DtHMM by given parameters.
+        A : (n,n) ndarray
+            transition probabilities matrix for (n) hidden states
+        B : (n,m) ndarray
+            probability matrix of (m) observation symbols being emitted by (n) hidden state
+        Pi : (n) ndarray
+            vector of initial probabilities
+        """
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( A,B,Pi )
 
@@ -231,8 +238,19 @@ cdef class DtHMM:
 
         return beta
 
-    cpdef viterbi(self, numpy.ndarray[int_t, ndim=1] emissions):
-        """From given emission sequence and parameters calculate the most likely state sequence"""
+    cpdef viterbi(self, numpy.ndarray[int_t, ndim=1] e_seq):
+        """
+        From given emission sequence and parameters calculate the most likely state sequence
+        Parameters
+        ----------
+        e_seq:  ndarray, int
+                observation (emission) symbols sequence
+        Returns
+        -------
+        (max_p, path) :  max_p: probability of the most likely state sequence
+                         path: most likely state sequence
+
+        """
 
         cdef numpy.ndarray[float_t, ndim=2] loga = self._loga
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
@@ -240,12 +258,12 @@ cdef class DtHMM:
         cdef int i, s, size, states_num,
         cdef float_t max_p
 
-        size = emissions.shape[0]
+        size = e_seq.shape[0]
         states_num = self._loga.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
         cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
 
-        delta[0,:] = logpi + logb[:, int(emissions[0]) ]
+        delta[0,:] = logpi + logb[:, int(e_seq[0]) ]
         psi[0,:] = 0
         for i in range(1,size):
             for s in range(states_num):
@@ -258,7 +276,7 @@ cdef class DtHMM:
                         delta[i,s] = delta[i-1,r] + loga[r,s]
                         psi[i,s] = r
 
-                delta[i,s] += logb[s,emissions[i]]
+                delta[i,s] += logb[s,e_seq[i]]
 
         max_p = delta[-1,0]
 
@@ -337,7 +355,15 @@ cdef class DtHMM:
                 raise ValueError( error_string, mx+1," vs ", num )
 
     cpdef maximum_likelihood_estimation( self, s_seqs, e_seqs ):
-        """Given dataset of state and emission sequences estimate the most likely parameters."""
+        """
+        Given dataset of state and emission sequences estimate the most likely parameters.
+        Parameters
+        ----------
+        s_seqs : 2D ndarray or list of ndarrays, int
+                 hidden states sequences
+        e_seqs:  2D ndarray or list of ndarrays, int
+                 observation (emission) symbols sequences
+        """
 
         self._seqs_check( s_seqs,  self._logb.shape[0], "Data has more hidden states than model. " )
         self._seqs_check( e_seqs,  self._logb.shape[1], "Data has more observation symbols than model. " )
@@ -395,17 +421,40 @@ cdef class DtHMM:
 #
 #        return graph
 
-    def baum_welch( self, data, iteration = 10, **kvargs ):
+    def baum_welch( self, e_seqs, iterations = 10, **kvargs ):
+        """
+        Estimate parameters by Baum-Welch algorithm
 
+        Parameters
+        ----------
+        e_seqs:  2D ndarray or list of ndarrays
+              observation (emission) symbols sequences
+        iterations: Optional[int]
+                    number of algorithm iterations
+        **est :  boolean
+                 if True return the vector of estimations for every iteration
+                 default: False
+        Returns
+        -------
+        graph : (iterations + 1) ndarray
+                if **est== True
+                None otherwise
+        References
+        ----------
+        .. [1] Rabiner, L. R.: A tutorial on hidden Markov models and selected applic-
+               ations in speech recognition. Proceedings of the IEEE, volume 77, no. 2,
+               1989: pp. 257–286.
+        """
         if 'est' in kvargs:
             if kvargs['est'] == True:
-                return self._baum_welch( data, True, iteration )
+                return self._baum_welch( e_seqs, True, iterations )
 
-        self._baum_welch( data, False, iteration )
+        self._baum_welch( e_seqs, False, iterations )
 
     cpdef _baum_welch(self, data, int est, iterations = 10 ):
-        """Estimate parameters by Baum-Welch algorithm.
-           Input array data is the numpy array of observation sequences.
+        """
+        Estimate parameters by Baum-Welch algorithm.
+        Called internally by baum_welch function.
         """
 
         self._seqs_check( data,  self._logb.shape[1], "Data has more observation symbols than model. " )

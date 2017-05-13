@@ -1,3 +1,12 @@
+"""
+Continuous-time hidden Markov model class
+"""
+
+#
+# Authors: Lukas Lopatovsky, Mai 2017
+#
+
+
 #import pyximport; pyximport.install()
 from hmms import hmm
 from hmms cimport hmm
@@ -20,6 +29,9 @@ ctypedef numpy.int_t int_t
 
 
 cdef class CtHMM(hmm.HMM):
+    """
+    TODO comment
+    """
 
     cdef numpy.ndarray _q
 
@@ -60,7 +72,16 @@ cdef class CtHMM(hmm.HMM):
         return( self.q, self.b, self.pi )
 
     def __init__(self, Q,B,Pi):
-        """Initialize the DtHMM by given parameters."""
+        """
+        Initialize the CtHMM by given parameters.
+        Q : (n,n) ndarray
+            jump-rates matrix for (n) hidden states
+            may be sparse (contain zeros) to spare some computation
+        B : (n,m) ndarray
+            probability matrix of (m) observation symbols being emitted by (n) hidden state
+        Pi : (n) ndarray
+            vector of initial probabilities
+        """
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( Q,B,Pi )
         self.t1 = 0    #test only
@@ -528,8 +549,23 @@ cdef class CtHMM(hmm.HMM):
         return beta
 
 
-    cpdef viterbi(self, times, numpy.ndarray[int_t, ndim=1] emissions, prepare_matrices = True):
-        """From given emission sequence and parameters calculate the most likely state sequence"""
+    cpdef viterbi(self, t_seq, numpy.ndarray[int_t, ndim=1] e_seq, prepare_matrices = True):
+        """
+        From given emission sequence and parameters calculate the most likely state sequence
+        Parameters
+        ----------
+        t_seq :  ndarray, float or int
+                 time sequence
+        e_seq:   ndarray, int
+                 observation (emission) symbols sequence corresponding to times in t_seq
+        prepare_matrices: Optional[boolean]
+                    Called as False only internally
+        Returns
+        -------
+        (max_p, path) :  max_p: probability of the most likely state sequence
+                         path: most likely state sequence
+
+        """
 
         cdef numpy.ndarray[float_t, ndim=2] loga = self._q
         cdef numpy.ndarray[float_t, ndim=2] logb = self._logb
@@ -538,19 +574,19 @@ cdef class CtHMM(hmm.HMM):
         cdef float_t max_p, temp
 
         if prepare_matrices:
-            self._prepare_matrices_pt( numpy.array( [times] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
+            self._prepare_matrices_pt( numpy.array( [t_seq] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
 
-        size = emissions.shape[0]
+        size = e_seq.shape[0]
         states_num = self._q.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
         cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
 
 
-        delta[0,:] = logpi + logb[:, int(emissions[0]) ]
+        delta[0,:] = logpi + logb[:, int(e_seq[0]) ]
         psi[0,:] = 0
         for i in range(1,size):
 
-            interval = times[i] - times[i-1]
+            interval = t_seq[i] - t_seq[i-1]
 
             for s in range(states_num):
 
@@ -563,7 +599,7 @@ cdef class CtHMM(hmm.HMM):
                         delta[i,s] = temp
                         psi[i,s] = r
 
-                delta[i,s] += logb[s,emissions[i]]
+                delta[i,s] += logb[s,e_seq[i]]
 
         max_p = delta[-1,0]
 
@@ -665,7 +701,30 @@ cdef class CtHMM(hmm.HMM):
 
 
     def maximum_likelihood_estimation( self, s_seqs, t_seqs, e_seqs, iteration = 10, **kvargs ):
-
+        """
+        Given dataset of state, times and emission sequences estimate the most likely parameters.
+        Parameters
+        ----------
+        s_seqs : 2D ndarray or list of ndarrays, int
+                 hidden states sequences
+        t_seqs : 2D ndarray or list of ndarrays, float or int
+                 time sequences
+        e_seqs:  2D ndarray or list of ndarrays, int
+                 observation (emission) symbols sequences corresponding to times in t_seqs
+        iterations: Optional[int]
+                    number of algorithm iterations
+        **est :  boolean
+                 if True return the vector of estimations for every iteration
+                 default: False
+        **fast:  boolean
+                 if True run the square and multiply for matrix exponentiation for interval of integer length
+                 default: True
+        Returns
+        -------
+        graph : (iterations + 1) ndarray
+                if **est== True
+                None otherwise
+        """
         if 'est' not in kvargs: kvargs['est'] = False
         if 'fast' not in kvargs: kvargs['fast'] = True
 
@@ -829,7 +888,18 @@ cdef class CtHMM(hmm.HMM):
         return graph
 
     cpdef states_confidence( self, t_seq, e_seq ):
-        """Given emission sequence, return probabilities that emission is generated by a state, for every time and every state."""
+        """
+        Given emission sequence, return probabilities that emission is generated by a state, for every time and every state.
+        Parameters
+        ----------
+        t_seqs : ndarray, float or int
+                 time sequence
+        e_seqs:  ndarray, int
+                 observation (emission) symbols sequence corresponding to times in t_seqs
+        Returns
+        -------
+        gamma : 2D ndarray od states confidence for any time
+        """
         self._prepare_matrices_pt( numpy.array( [t_seq] ) )
         return self.single_state_prob( self.forward ( t_seq, e_seq ), self.backward( t_seq , e_seq ) )
 
@@ -858,7 +928,48 @@ cdef class CtHMM(hmm.HMM):
 #
 #        return graph
 
-    def baum_welch( self, times, data, iteration = 10, **kvargs ):
+    def baum_welch( self, t_seqs, e_seqs, iterations = 10, **kvargs ):
+
+        """
+        Estimate parameters by continuous-time version of Baum-Welch algorithm
+        Parameters
+        ----------
+        t_seqs : 2D ndarray or list of ndarrays, float or int
+                 time sequences
+        e_seqs:  2D ndarray or list of ndarrays, int
+                 observation (emission) symbols sequences corresponding to times in t_seqs
+        iterations: Optional[int]
+                    number of algorithm iterations
+                    default: 10
+        **est :  boolean
+                 if True return the vector of estimations for every iteration
+                 default: False
+        **fast:  boolean
+                 if True run the square and multiply for matrix exponentiation for interval of integer length
+                 default: True
+        **method: str
+                  "soft" or "hard" to use soft or hard method
+                  default: "soft"
+
+        Returns
+        -------
+        graph : (iterations + 1) ndarray
+                if **est== True
+                None otherwise
+        Notes
+        -----
+        Refer to thesis [2] Section 2.4 for algorithm, Section 2.5 for complexity.
+
+        References
+        ----------
+        .. [1] Liu, Y.-Y.; Li, S.; Li, F.; etc.: Efficient learning of continuous-time hidden
+               markov models for disease progression. In Advances in neural information
+               processing systems, 2015, pp. 3600–3608
+        .. [2] Lopatovský, Lukáš. Learning Methods for Continuous-Time Hidden Markov Models.
+               Master’s thesis. Czech Technical University in Prague,
+               Faculty of Information Technology, 2017.
+               Also available from: https://github.com/lopatovsky/DP.
+        """
 
         if 'est' not in kvargs: kvargs['est'] = False
         if 'fast' not in kvargs: kvargs['fast'] = True
@@ -866,11 +977,12 @@ cdef class CtHMM(hmm.HMM):
 
         method = 0
         if kvargs['method'] == "hard": method = 1
-        return self._baum_welch( times, data, kvargs['est'], kvargs['fast'], iteration, method )
+        return self._baum_welch( t_seqs, e_seqs, kvargs['est'], kvargs['fast'], iterations, method )
 
     cdef _baum_welch(self, times, data, int est, int fast, int iterations, int met ):
-        """Estimate parameters by Baum-Welch algorithm.
-           Input array data is 2D numpy array or list of numpy arrays of observation and time sequences.
+        """
+        Estimate parameters by Baum-Welch algorithm.
+        Called internally by baum_welch function.
         """
 
         self._seqs_check( data,  self._logb.shape[1], "Data has more observation symbols than model. " )
