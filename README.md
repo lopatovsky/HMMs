@@ -1,4 +1,4 @@
-Intro
+Introo
 =======
 
 HMMs is the **Hidden Markov Models library** for *Python*. 
