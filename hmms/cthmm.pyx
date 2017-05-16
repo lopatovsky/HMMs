@@ -16,8 +16,6 @@ cimport numpy
 cimport cython
 from cython cimport view
 
-import time    #for test purpose only
-
 import random
 
 #cython: wraparound=False
@@ -29,9 +27,6 @@ ctypedef numpy.int_t int_t
 
 
 cdef class CtHMM(hmm.HMM):
-    """
-    TODO comment
-    """
 
     cdef numpy.ndarray _q
 
@@ -43,13 +38,6 @@ cdef class CtHMM(hmm.HMM):
     cdef numpy.ndarray _logb
     cdef numpy.ndarray _logpi
     cdef int time_n  #number of different time intervals
-
-    cdef float_t t1,t2,t3,t4;   #test only
-    def print_ts(self):
-        print("t1", self.t1)
-        print("t2", self.t2)
-        print("t3", self.t3)
-        print("t4", self.t4)
 
     @property
     def time_n(self):
@@ -84,10 +72,6 @@ cdef class CtHMM(hmm.HMM):
         """
         numpy.seterr( divide = 'ignore' )  #ignore warnings, when working with log(0) = -inf
         self.set_params( Q,B,Pi )
-        self.t1 = 0    #test only
-        self.t2 = 0
-        self.t3 = 0
-        self.t4 = 0
 
     @classmethod
     def from_file( cls, path ):
@@ -173,7 +157,6 @@ cdef class CtHMM(hmm.HMM):
 
         for i in range( s ):
 
-            ##TODO - do we want for ij i!= j sum to 1?
             vec = CtHMM.get_random_vector(s-1)
             q[i,:i] = vec[:i]
             q[i,i+1:] = vec[i:]
@@ -233,17 +216,12 @@ cdef class CtHMM(hmm.HMM):
             time_interval = int( random.expovariate( exp ) ) + 1
             current_time += time_interval
 
-            #print( time_interval )
-            #print(q)
-            #print( scipy.linalg.expm(q * time_interval ) )
-
             qt = scipy.linalg.expm(q * time_interval )
 
             current_state = numpy.random.choice( qt.shape[1],1, p = qt[ current_state,:].flatten() )
 
         return ( times, states, emissions )
 
-    #TODO exp param
     def generate_data( self, size, exp=0.5, **kargs ):
         """Generate multiple sequences of times and emissions from model parameters
            size = ( number of sequences, length of sequences  )
@@ -259,8 +237,6 @@ cdef class CtHMM(hmm.HMM):
 
         return (t,e)
 
-
-    #TODO implement variant for square and multiply
     cdef _prepare_matrices_pt( self, times ):
         """Will pre-count exponencials of matrices for all different time intervals"""
 
@@ -276,7 +252,7 @@ cdef class CtHMM(hmm.HMM):
         if is_list: seq_num = len(times)        #list of numpy vectors
         else: seq_num = times.shape[0]          #numpy matrix
 
-        self._pt = numpy.empty( (max_len,q.shape[0],q.shape[0]) , dtype=numpy.float64 ) #TODO may be uselessly too big
+        self._pt = numpy.empty( (max_len,q.shape[0],q.shape[0]) , dtype=numpy.float64 )
         self.tmap = {}
         cdef float_t interval
         cdef int cnt = 0
@@ -290,14 +266,8 @@ cdef class CtHMM(hmm.HMM):
                     interval = times[i,j] - times[i,j-1]
 
                 if interval not in self.tmap:
-                   #print( "int: ", interval)
-                   #print(scipy.linalg.expm( q * interval ))
-                   #print("int", interval)
-                   #print("Q", q)
 
-                   start_time = time.time()
-                   pt = scipy.linalg.expm( q * interval )  #TODO copy directly in the 3D array?
-                   self.t1 += time.time() - start_time
+                   pt = scipy.linalg.expm( q * interval )
 
                    self._pt[cnt,:,:] = pt
 
@@ -305,9 +275,6 @@ cdef class CtHMM(hmm.HMM):
                    cnt+= 1
 
         self.time_n = cnt
-
-        #print("tmap")
-        #print(self.tmap)
 
     cdef _prepare_matrices_n_exp( self ):
         """Will pre-count integrals $\int_0^t( e^{Qx}_{k,i} e^{Q(t-x)}_{j,l} dx$ for any states $i,j,k,l \in$ hidden states """
@@ -343,9 +310,8 @@ cdef class CtHMM(hmm.HMM):
 
                 A[i,s_num + j] = 1  # set the subpart matrix B
 
-                start_time = time.time()
-                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
-                self.t2 += time.time() - start_time
+
+                temp = scipy.linalg.expm( A )
 
 
                 self._n_exp[ cnt,:,:] = temp
@@ -391,9 +357,9 @@ cdef class CtHMM(hmm.HMM):
 
                 A[i,s_num + j] = tm  # set the subpart matrix B
 
-                start_time = time.time()
-                temp = scipy.linalg.expm( A )  #TODO copy directly in the 4D array
-                self.t2 += time.time() - start_time
+
+                temp = scipy.linalg.expm( A )
+
 
                 self._n_exp[cnt,:,:] = temp
 
@@ -409,10 +375,6 @@ cdef class CtHMM(hmm.HMM):
 
     cpdef float_t emission_estimate(self,  times, numpy.ndarray[int_t, ndim=1] emissions ):
         """From given emission sequence calculate the likelihood estimation given model parameters"""
-        #print("alpha", self.forward( times,emissions )[-1,:])
-
-        #print("1", self.log_sum( self.forward( times,emissions )[-1,:] ) )
-
         return  self.log_sum( self.forward( times,emissions )[-1,:] )
 
     cpdef float_t data_estimate( self, times , data ):
@@ -422,7 +384,7 @@ cdef class CtHMM(hmm.HMM):
 
 
         for t,row in zip( times, data):
-            #print( "2", self.emission_estimate( t,row ) )
+
             sm += self.emission_estimate( t,row )
         return sm
 
@@ -458,24 +420,18 @@ cdef class CtHMM(hmm.HMM):
         cdef int i, s, size, states_num
         cdef float_t interval, prob  #it is log probability
 
-        #print(states)
-        #print(times)
-        #print(emissions)
-
-
         size = emissions.shape[0]
 
         prob = logpi[ states[0] ] + logb[ states[0], int(emissions[0]) ]
-        #print(prob)
+
 
 
         for i in range(1,size):
             interval = times[i] - times[i-1]
-            #print( numpy.log( self._pt[ self.tmap[ interval ],states[i-1],states[i]]) )
+
             prob += numpy.log( self._pt[ self.tmap[ interval ],states[i-1],states[i]] )
-            #print(logb[states[i],int(emissions[i])])
+
             prob += logb[states[i],int(emissions[i])]
-            #print("prob",numpy.log(prob))
 
         return prob
 
@@ -497,7 +453,7 @@ cdef class CtHMM(hmm.HMM):
 
         size = emissions.shape[0]
         states_num = self._q.shape[0]
-        #print(states_num)
+
 
         cdef numpy.ndarray[float_t, ndim=2] alpha = numpy.empty( (size,states_num), dtype=numpy.float64 )
 
@@ -507,18 +463,14 @@ cdef class CtHMM(hmm.HMM):
 
             interval = times[i] - times[i-1]
 
-            #print("int ", interval)
+
             tmap_int = self.tmap[ interval ]
 
             for s in range(states_num):
 
-                #print("ti", tmap_int )
-                #print("s",s)
-
                 alpha[i,s] = self.log_sum( alpha[i-1,:]
                                          + numpy.log( self._pt[ tmap_int,:,s]  ) )
 
-            #print(  numpy.exp(alpha[i,:]) )
             alpha[i,:] = alpha[i,:] + logb[:, int(emissions[i]) ]
 
         return alpha
@@ -574,12 +526,12 @@ cdef class CtHMM(hmm.HMM):
         cdef float_t max_p, temp
 
         if prepare_matrices:
-            self._prepare_matrices_pt( numpy.array( [t_seq] ) )  # TODO - lazy prepare matrices method & not call if it is not needed.
+            self._prepare_matrices_pt( numpy.array( [t_seq] ) )
 
         size = e_seq.shape[0]
         states_num = self._q.shape[0]
-        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
-        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 )
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int )
 
 
         delta[0,:] = logpi + logb[:, int(e_seq[0]) ]
@@ -652,10 +604,7 @@ cdef class CtHMM(hmm.HMM):
 
             ksi[t,:,:] -= self.log_sum( ksi[t,:,:].flatten()  )
 
-        #print(numpy.exp(ksi))
-
-        return ksi  #Note: actually for use in Baum welch algorithm, it wouldn't need to store whole array.
-
+        return ksi
 
     cdef numpy.ndarray[float_t, ndim=2] _get_hard_table( self, seq ):
         """Take the most probable state sequence and create hard probability table"""
@@ -803,9 +752,6 @@ cdef class CtHMM(hmm.HMM):
                 gamma = self._get_hard_table( ss )
                 ksi = self._get_double_hard_table( ss )
 
-
-
-
                 #sum the ksi with same time interval together
                 for tmi in range( t.shape[0] - 1 ):
 
@@ -855,9 +801,7 @@ cdef class CtHMM(hmm.HMM):
 
 
                         if( tm == int(tm) and fast  ):
-                            start_time = time.time()
                             tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
-                            self.t3 += time.time() - start_time
                         else:
                             tA = temp[:s_num,s_num:]
 
@@ -904,29 +848,6 @@ cdef class CtHMM(hmm.HMM):
         return self.single_state_prob( self.forward ( t_seq, e_seq ), self.backward( t_seq , e_seq ) )
 
 
-
-    ## DEPRECATED
-#    def baum_welch_graph( self, times, data, iteration =10  ):
-#        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
-#        graph = numpy.empty(iteration+1)
-#        graph[0] = self.data_estimate( times, data)
-#
-#        for i in range(1,iteration+1):
-#            self._baum_welch( times, data, 0,1 )
-#            graph[i] = self.data_estimate(times, data)
-#
-#        return graph
-#
-#    def baum_welch_graph2( self, times, data, iteration =10  ):
-#        """Slower method for Baum-Welch that in evey algorithm iteration count the data estimation, so it could return its learning curve"""
-#        graph = numpy.empty(iteration+1)
-#        graph[0] = self.data_estimate( times, data)
-#
-#        for i in range(1,iteration+1):
-#            self._baum_welch( times, data, 1,1 )
-#            graph[i] = self.data_estimate(times, data)
-#
-#        return graph
 
     def baum_welch( self, t_seqs, e_seqs, iterations = 10, **kvargs ):
 
@@ -995,10 +916,6 @@ cdef class CtHMM(hmm.HMM):
         cdef int cnt,it,i,j,k,l,map_time,ix,seq_num, tmi
         cdef float_t interval, tm
 
-        #start_time = time.time()
-        #...
-        #print("--- %s seconds ---" % (time.time() - start_time))
-
         cdef int s_num = self._logb.shape[0]  #number of states
         cdef int o_num = self._logb.shape[1]  #number of possible observation symbols (emissions)
 
@@ -1007,19 +924,18 @@ cdef class CtHMM(hmm.HMM):
 
         if est:
             graph = numpy.zeros(iterations+1)
-            #graph2 = numpy.zeros(iterations+1) #frozen feature
+
 
         for it in range( iterations ):
 
-            print("it",it)
-            #self.check_params() ##TODO only for test reason
+            print("iteration ", i+1, "/", iterations )
+
 
             self._prepare_matrices_pt( times )
 
             ksi_sum = numpy.full( ( self.time_n, s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )
             pi_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
-            #gamma_part_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_full_sum  = numpy.full(  s_num , numpy.log(0), dtype=numpy.float64 )
             gamma_sum = numpy.empty( s_num , dtype=numpy.float64 )
 
@@ -1032,24 +948,16 @@ cdef class CtHMM(hmm.HMM):
 
                     gamma = self.single_state_prob( alpha, beta )
                     ksi = self.double_state_prob( alpha, beta, t, row )
-                    #TODO sum probs for same delta(t).
 
                 elif met == 1:   ##hard method (to count alpha and beta is not useful for hard method - left just for counting of estimation)
 
                     _,path = self.viterbi( t, row, False )
                     gamma = self._get_hard_table( path )
                     ksi = self._get_double_hard_table( path )
-                    #gamma = self.single_state_prob( alpha, beta )
 
-
-                #print("ksi",ksi)
                 if est:
-
-                    #val,_ = self.viterbi( t, row, False ) #frozen feature
-                    #graph2[it] += val                     #frozen feature
-
                     graph[it] += self.log_sum( alpha[-1,:] )
-                    #graph[it] = numpy.fabs( self.q[0,0] )
+
 
 
                 #expected number of being in state i in time 0
@@ -1062,18 +970,10 @@ cdef class CtHMM(hmm.HMM):
                     interval = t[tmi+1]-t[tmi]
                     map_time = self.tmap[ interval ]
 
-                    #print("interval", interval)
-
                     for i in range(s_num):
                         for j in range( s_num ):
 
-                            #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
                             ksi_sum[map_time,i,j] = self.log_sum_elem( ksi_sum[map_time,i,j], ksi[tmi,i,j] )
-                            #print("ks_sum",ksi_sum[map_time,i,j], ksi[tm,i,j])
-
-                #print("ksisum",ksi_sum)
-
-                #print("C ksi", ksi_sum[0] )
 
                 #expected number of visiting state i and observing symbol v
                 for tmi in range( row.shape[0] ):
@@ -1088,7 +988,6 @@ cdef class CtHMM(hmm.HMM):
                 for i in range ( s_num ):
                     gamma_full_sum[i] = self.log_sum_elem( gamma_full_sum[i], gamma_sum[i] )
 
-            #tau, eta = self.end_state_expectations( ksi_sum ) #TODO move all of these in separate function?
             tau = numpy.zeros( (s_num), dtype=numpy.float64 )
             eta = numpy.zeros( (s_num,s_num), dtype=numpy.float64 )
 
@@ -1099,16 +998,11 @@ cdef class CtHMM(hmm.HMM):
             if fast:
                 self._prepare_matrices_n_exp()
 
-            ##print(numpy.asarray(self._n_exp[0,0]))
 
-            #print("EXP 0,2 - 1-1")
-            #print( numpy.asarray( self._n_exp[0,2] ) )
-            #print( numpy.asarray( self._n_exp[1,1] ) )
-            #print("EXP")
 
             for tm, ix in self.tmap.items():  #iterate trough all the different time intervals
 
-                #print("tm ix", tm, ix)
+
 
                 if( tm != int(tm) or fast==0):
                     self._prepare_matrices_n_exp_for_float(tm)
@@ -1118,10 +1012,6 @@ cdef class CtHMM(hmm.HMM):
 
                         if self._q[i,j] == 0 : continue;  #impossible to jump from state i to state j
 
-#                        if i==0 and j==0:
-#                            print(i,j, numpy.asarray(self._n_exp[i,j]))
-#                            print("t1",temp)
-
                         cnt = self.emap[ i*s_num + j ]
 
                         ##doesn't work - > temp = numpy.asarray(self._n_exp[i,j,:,:])
@@ -1129,33 +1019,10 @@ cdef class CtHMM(hmm.HMM):
                             for l in range(s_num*2):
                                 temp[k,l] = self._n_exp[ cnt ,k,l]
 
-
-                        #temp = numpy.full( (s_num*2,s_num*2), 4.25 )
-
-                        #TODO -numpy bug? temp as the ndarray is the same memory as the output tA array
-
                         if( tm == int(tm) and fast  ):
-                            start_time = time.time()
-                            tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]  #TODO cashing can save some O(2/3) of computations
-                            self.t3 += time.time() - start_time
+                            tA  = numpy.linalg.matrix_power( temp , int(tm) )[:s_num,s_num:]
                         else:
                             tA = temp[:s_num,s_num:]
-
-
-
-
-
-#                        if i==0 and j==0:
-#                            #tA[0,0] = 5
-#                            print(i,j, numpy.asarray(self._n_exp[i,j]))
-#                            print("d",temp)
-#                            print("dA",tA)
-
-
-                        #print("ta",tA)
-                        #print("ksi", ksi_sum[ix] )
-                        #print("log", numpy.log( tA ) )
-                        #print("pt",numpy.asarray(self._pt[ ix ]))
 
 
                         if i == j:
@@ -1164,20 +1031,11 @@ cdef class CtHMM(hmm.HMM):
 
                             tau[i]  += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )   #tau is not in log prob anymore.
 
-                            #print(tau[i])
 
                         else:
                             tA *= self._q[i,j]
                             tA /= self._pt[ ix ]
                             eta[i,j] += numpy.exp( self.log_sum( (ksi_sum[ix] + numpy.log( tA ) ).flatten() ) )  #eta is not in log prob anymore.
-
-                        ##print("tau\n",tau)
-
-
-            ##print("tau\n",tau)
-            #print("eta\n",eta)
-
-
 
             #Update parameters:
 
@@ -1188,15 +1046,13 @@ cdef class CtHMM(hmm.HMM):
             #jump rates matrice
             self._q = ( eta.T / tau ).T
 
-            #print("b",self._q)
+
 
             self._q = numpy.nan_to_num(self._q)   # nan can appear, when some of the states is not reachable
 
             if sum( self._q.flatten() ) == 0:
                 raise ValueError("Parameter error! Matrix Q can't contain unreachable states.")
-            #print("e",self._q)
 
-            #print(  self._q  )
             for i in range( s_num ):
                 self._q[i,i] = - numpy.sum( self._q[i,:] )
 
@@ -1207,23 +1063,10 @@ cdef class CtHMM(hmm.HMM):
                         self._logb[ind,:] = numpy.log( 1/ self._logb.shape[1] )
 
 
-
-
-
-                #print( numpy.exp( self._logpi ) )
-                #print( self._q )
-                #print( "CT-HMM qt, t = 1s  like A" )
-                #print( scipy.linalg.expm( self._q ) )
-                #print( numpy.exp( self._logb ) )
-
         if est:
             graph[iterations] = self.data_estimate(times, data)
-            #graph2[iterations] = graph2[iterations-1]  #frozen feature
-            #return (graph, graph2) #frozen feature
             return graph
 
-    #cdef ( numpy.ndarray[float_t, ndim=1], numpy.ndarray[float_t, ndim=2] ) end_state_expectations( self, numpy.ndarray[float_t, ndim=3] ksi_sum ):
-        #self._prepare_matrices_n_exp()
 
     cpdef float_t log_sum(self, numpy.ndarray[float_t, ndim=1] vec ):
         """Count sum of items in vec, that contain logaritmic probabilities using log-sum-exp trick"""
@@ -1254,8 +1097,6 @@ cdef class CtHMM(hmm.HMM):
 def main():
     my_hmm = CtHMM()
     my_hmm.meow()
-    print( type( hmm.HMM ) )
-
 
 if __name__ == "__main__":
     main()

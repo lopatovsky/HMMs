@@ -197,17 +197,6 @@ def test_baum_welch_small_multiple_data( small_random_hmm, hmm_small_out ):
 
     assert compare_parameters( hmm, hmm_small_out, 1e-2 )
 
-#def test_baum_welch_cykle( small_random_hmm, hmm_cycle_out ):
-#    """Test if baum_welch algorithm converge to the right parameters"""
-#    #TODO sometimes (1/5 cases) fall in the local optima, examine, if it is ok behaviour
-#    hmm = small_random_hmm
-#    data = numpy.array([[0,1,0,1,0,1],[1,0,1,0,1,0],[1,0,1,0,1,0],[0,1,0,1,0,1],[0,1,0,1,0,1],[1,0,1,0,1,0]]);
-#    hmm.baum_welch( data , 20 )
-#
-#    assert compare_parameters( hmm, hmm_cycle_out, 1e-2, False )
-
-
-
 
 def test_mle( small_hmm2 ):
     """Test if maximum_likelihood_estimation function return correct values"""

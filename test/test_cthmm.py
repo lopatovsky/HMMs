@@ -176,9 +176,6 @@ def test_growing_likelihood(h_states, o_symbols, data_num, data_len):
 
     dl = cthmm_t.baum_welch( t,e,15, est=True )
 
-    #print("~~~~~~<")
-    #print(dl)
-
     assert float_equal_mat( dl, numpy.sort( dl )  )
 
 
@@ -245,16 +242,3 @@ def test_baum_welch( train_data, cthmm, out_params ):
     cthmm.baum_welch( t,e,20 )
 
     assert compare_parameters_no_sort( out_params,  cthmm, 1e-5 )
-
-
-
-
-#TODO pridaj ako test na prepare matrices
-#    def zmaz_ma( self, times ):
-#        self._prepare_matrices_pt( numpy.array( [times] ) )
-#        for i in range ( 1, times.shape[0] ):
-#            interval = times[i] - times[i-1]
-#            print("i:",interval)
-#            print( numpy.asarray( self._pt[ self.tmap[ interval ] ]  ) )
-#
-#        self._prepare_matrices_n_exp()
