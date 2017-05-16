@@ -10,7 +10,7 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='0.1.1.12',
+    version='0.1.2',
     description='Discrete-time and continuous-time hidden Markov model library',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
@@ -41,7 +41,6 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         ],
-    cmdclass={'build_ext':build_ext},
     setup_requires=['pytest-runner',],
     tests_require=['pytest',],
 )
