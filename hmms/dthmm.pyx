@@ -1,3 +1,12 @@
+"""
+Discrete-time hidden Markov model class
+"""
+
+#
+# Authors: Lukas Lopatovsky, Mai 2017
+#
+
+
 import numpy
 import random
 import time  #performance meassure

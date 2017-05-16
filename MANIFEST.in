@@ -1,3 +1,7 @@
 include LICENSE
-CT-HMM.ipynb
+include hmms.ipynb
+include test/common.py
+include test/experiments.py
+include requirements.txt
+include Models
 recursive-include hmms *.pyx *.pxd 

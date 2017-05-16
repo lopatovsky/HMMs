@@ -3,6 +3,16 @@ from setuptools import setup, find_packages
 from Cython.Build import cythonize
 import numpy
 
+from setuptools.command.build_ext import build_ext as _build_ext
+
+class build_ext(_build_ext):
+    def finalize_options(self):
+        _build_ext.finalize_options(self)
+        # Prevent numpy from thinking it is still in its setup process:
+        __builtins__.__NUMPY_SETUP__ = False
+        import numpy
+        self.include_dirs.append(numpy.get_include())
+
 
 with open('README') as f:
     long_description = ''.join(f.readlines())
@@ -10,7 +20,7 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='0.1.1.8',
+    version='0.1.1.11',
     description='DT-HMM and CT-HMM library',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
@@ -41,6 +51,7 @@ setup(
         'Topic :: Software Development :: Libraries',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         ],
-    setup_requires=['pytest-runner'],
+    cmdclass={'build_ext':build_ext},
+    setup_requires=['pytest-runner','numpy'],
     tests_require=['pytest',],
 )
