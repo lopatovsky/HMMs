@@ -39,7 +39,8 @@ Download & Install
 After installing Numpy and Cython, you can install the package directly from test pypi.
 
 ```
-(env)$ python -m pip install numpy cython hmms
+(env)$ python -m pip install numpy cython
+(env)$ python -m pip install hmms
 
 ```
 
