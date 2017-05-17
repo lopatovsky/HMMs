@@ -192,7 +192,7 @@ cdef class CtHMM(hmm.HMM):
 
 
 
-    def generate(self, size, exp=0.5 ):
+    def generate(self, size, exp=0.5, **kvargs ):
         """Randomly generate a sequence of states, times and emissions from model parameters."""
         q = numpy.array( self._q )
         pt = numpy.empty( q.shape )
@@ -202,37 +202,43 @@ cdef class CtHMM(hmm.HMM):
 
         states = numpy.empty(size,dtype=int)
         emissions = numpy.empty(size,dtype=int)
-        times = numpy.empty(size,dtype=int)
+        times = numpy.zeros(size)
+
+        if ('time' in kvargs):
+            for i,val in enumerate( kvargs['time'] ):
+                times[i] = val
+        else:
+            for i in range(1,size):
+                times[i] = times[i-1] + int( random.expovariate( exp ) ) + 1
 
         current_state = numpy.random.choice( pi.shape[0], 1, p= pi)
-        current_time = 0;
 
         for i in range(size):
             states[i] = current_state
-            times[i] =  current_time
             emissions[i] =  numpy.random.choice( b.shape[1],1, p = b[ current_state,:].flatten() )
 
+            if(i == size-1): return ( times, states, emissions )
+
             #observation times will have exponential distances.
-            time_interval = int( random.expovariate( exp ) ) + 1
-            current_time += time_interval
+            time_interval = times[i+1] - times[i]
 
             qt = scipy.linalg.expm(q * time_interval )
 
             current_state = numpy.random.choice( qt.shape[1],1, p = qt[ current_state,:].flatten() )
 
-        return ( times, states, emissions )
 
-    def generate_data( self, size, exp=0.5, **kargs ):
+
+    def generate_data( self, size, exp=0.5, **kvargs ):
         """Generate multiple sequences of times and emissions from model parameters
            size = ( number of sequences, length of sequences  )
-           **kargs:  states=True : return also sequence of states
+           **kvargs:  states=True : return also sequence of states
         """
         e = numpy.empty( size, dtype=int )
         t = numpy.empty( size, dtype=int )
         s = numpy.empty( size, dtype=int )
         for i in range( size[0] ):
             t[i],s[i],e[i] = self.generate( size[1], exp )
-        if ('states' in kargs) and kargs['states'] == True:
+        if ('states' in kvargs) and kvargs['states'] == True:
             return(t,s,e)
 
         return (t,e)
