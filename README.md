@@ -22,7 +22,7 @@ For **deeper understanding** of the topic you can see the corresponding [diploma
 Or read the main referenced articles: [Dt-HMM](http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf>), [Ct-HMM](https://web.engr.oregonstate.edu/~lif/nips2015_CTHMM_learning_camera_ready.pdf) .
 
 -  Sources of the project:
-   [Testpypi](https://testpypi.python.org/pypi?%3Aaction=pkg_edit&name=hmms),
+   [Pypi](https://pypi.python.org/pypi/hmms),
    [Github](https://github.com/lopatovsky/CT-HMM),
 
 

@@ -10,8 +10,8 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='2.1.1.1.1.1',
-    description='Discrete-time and continuous-time hidden Markov model library',
+    version='0.1',
+    description='Discrete-time and continuous-time hidden Markov model library able to handle hundreds of hidden states',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
     license='Public Domain',

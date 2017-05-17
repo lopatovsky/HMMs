@@ -32,7 +32,7 @@ main referenced articles:
 .
 
 -  Sources of the project:
-   `Testpypi <https://testpypi.python.org/pypi?%3Aaction=pkg_edit&name=hmms>`__,
+   `Pypi <https://pypi.python.org/pypi/hmms>`__,
    `Github <https://github.com/lopatovsky/CT-HMM>`__.
 
 Requirements
