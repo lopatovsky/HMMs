@@ -461,7 +461,7 @@ cdef class DtHMM:
 
 
 
-            print("iteration ", i+1, "/", iterations )
+            print("iteration ", it+1, "/", iterations )
 
             ksi_sum = numpy.full( ( s_num, s_num ) , numpy.log(0), dtype=numpy.float64 )
             obs_sum = numpy.full( ( s_num, o_num ) , numpy.log(0), dtype=numpy.float64 )  #numpy can samewhat handle infinities or at least exp(log(0)) = 0

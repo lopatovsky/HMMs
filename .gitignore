@@ -11,8 +11,10 @@ dist/
 *.prof
 *.c
 *.swp
+*.npz
 test.py
 Models/
 .eggs/
 build/
 docs/_*
+
