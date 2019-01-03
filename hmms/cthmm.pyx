@@ -1049,9 +1049,6 @@ cdef class CtHMM(hmm.HMM):
 
             self._q = numpy.nan_to_num(self._q)   # nan can appear, when some of the states is not reachable
 
-            # if sum( self._q.flatten() ) == 0:
-            #     raise ValueError("Parameter error! Matrix Q can't contain unreachable states.")
-
             for i in range( s_num ):
                 self._q[i,i] = - numpy.sum( self._q[i,:] )
 
