@@ -739,7 +739,7 @@ cdef class CtHMM(hmm.HMM):
 
         for it in range( iterations ):
 
-            print("it",it)
+            # print("it",it)
 
             self._prepare_matrices_pt( t_seqs )
 
@@ -929,7 +929,7 @@ cdef class CtHMM(hmm.HMM):
 
         for it in range( iterations ):
 
-            print("iteration ", it+1, "/", iterations )
+            # print("iteration ", it+1, "/", iterations )
 
             self._prepare_matrices_pt( times )
 
