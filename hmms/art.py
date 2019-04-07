@@ -27,13 +27,32 @@ def print_parameters( hmm ):
     display( pd.DataFrame(hmm.b) )
 
 def plot_hmm( s_seq, e_seq, **kargs ):
+    """
+    kargs:
+    time: array-like, number of time steps taken by each transition.
+                      Must have same length as s_seq
+    state_labels: dict, dictionary with keys equal to the state index
+                      and values equal to its label. If not provided,
+                      the labels are the state indices.
+    observation_labels: dict, dictionary with keys equal to the observation index
+                      and values equal to its label. If not provided,
+                      the labels are the observation indices.
 
+    """
     n = e_seq.shape[0]
 
     if 'time' in kargs:
         X = kargs['time']
     else:
         X = numpy.arange(n)
+    if 'state_labels' in kargs:
+        s_labels = kargs['state_labels']
+    else:
+        s_labels = dict( zip(s_seq, s_seq) )
+    if 'observation_labels' in kargs:
+        o_labels = kargs['observation_labels']
+    else:
+        o_labels = dict( zip(e_seq, e_seq) )
     Y0 = numpy.zeros(n)
     Y1 = numpy.ones(n)
 
@@ -50,7 +69,7 @@ def plot_hmm( s_seq, e_seq, **kargs ):
     last_time = X[0] - 1;
 
     for (x,y,c) in zip(X,Y1,s_seq):
-        plt.annotate( c , xy=(x, y), xycoords='data', xytext=(-5, -5), textcoords='offset points', fontsize=16 )
+        plt.annotate( s_labels[c] , xy=(x, y), xycoords='data', xytext=(-5, -5), textcoords='offset points', fontsize=16 )
         ax.add_artist(plt.Circle((x, y), 0.3, color=cm.gnuplot( c/s_num ), alpha=0.4))
         ax.arrow( last_time +0.3, y, -0.7+(x-last_time), 0, head_width=0.35, head_length=0.1, fc='k', ec='k')
         ax.arrow(x, y-0.3, 0, -0.3, head_width=0.35, head_length=0.1, fc='k', ec='k')
@@ -58,10 +77,6 @@ def plot_hmm( s_seq, e_seq, **kargs ):
 
     for (x,y,c) in zip(X,Y0,e_seq):
         ax.add_artist(plt.Circle((x, y), 0.3, color=cm.gnuplot( 0.9*c/e_num + 0.1), alpha=0.7))
-        plt.annotate( c , xy=(x, y), xycoords='data', xytext=(-5, -5), textcoords='offset points', fontsize=16 )
+        plt.annotate( o_labels[c] , xy=(x, y), xycoords='data', xytext=(-5, -5), textcoords='offset points', fontsize=16 )
 
     plt.show()
-
-
-
-
