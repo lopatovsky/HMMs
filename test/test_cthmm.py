@@ -1,4 +1,4 @@
-import hmms
+import hmms-custom as hmms
 import pytest
 import numpy
 import scipy.linalg

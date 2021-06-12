@@ -1,5 +1,5 @@
 import numpy
-import hmms
+import hmms-custom as hmms
 
 def multi_train_ct(  hidden_states, times, data, runs, iteration = 10, **kwargs ):
         """Run multiple Baum-welch algorithms, always with different random initialization.

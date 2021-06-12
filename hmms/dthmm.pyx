@@ -155,10 +155,16 @@ cdef class DtHMM:
 
         cdef numpy.ndarray[int_t, ndim=1] row
         cdef float_t sm = 0
+        cdef int inf_cnt = 0
 
         for row in emissions:
-            sm += self.emission_estimate( row )
-        return sm
+            score = self.emission_estimate( row )
+            if numpy.isinf(score):
+                inf_cnt = inf_cnt + 1
+            else:
+                sm += self.emission_estimate( row )
+
+        return sm, inf_cnt
 
     cpdef float_t full_data_estimate( self, state_seqs, emissions ):
         """From the set of given state and emission sequences in the data calculate their likelihood estimation given model parameters
@@ -523,8 +529,14 @@ cdef class DtHMM:
             #observetion symbol emission probabilities estimation
             self._logb = (obs_sum.T - gamma_full_sum).T
 
+            self._loga[s_num - 1:] = 0
+            self._loga[s_num - 1, s_num - 1] = 1
+
+
         if est:
+            score, inf_count = self.data_estimate( data)
             graph[iterations] = self.data_estimate( data)
+            graph[iterations] = score + -100 * inf_count
             return graph
 
 
