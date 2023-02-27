@@ -1,3 +1,5 @@
+**UPDATE 2023/Feb/27** Direct Pypi installation is now fixed.
+
 Intro
 =======
 

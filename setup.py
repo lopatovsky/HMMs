@@ -4,13 +4,13 @@ from Cython.Build import cythonize
 import numpy
 
 
-with open('README') as f:
-    long_description = ''.join(f.readlines())
+with open('README.md', 'r') as f:
+    long_description = f.read()
 
 
 setup(
     name='hmms',
-    version='0.2',
+    version='0.2.1',
     description='Efficient discrete and continuous-time hidden Markov model library able to handle hundreds of hidden states',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
