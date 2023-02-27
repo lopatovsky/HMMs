@@ -2,24 +2,27 @@ Intro
 =======
 
 HMMs is the **Hidden Markov Models library** for *Python*. 
-It is easy to use, **general purpose** library, implementing all the important submethods, needed for the training, examining and experimenting with the data models.
+It is easy to use, **general purpose** library, implementing all the important
+submethods needed for the training, examining and experimenting with
+the data models.
 
-The effectivness of the computationally expensive parts is powered by *Cython*.
+The computationally expensive parts are powered by
+*Cython* to ensure high speed.
 
-You can build two models:
+The library supports the building of two models:
 
 <dl>
  <dt>Discrete-time Hidden Markov Model</dt>
- <dd>Usually just reffered as the Hidden Markov Model.</dd>
+ <dd>Usually simply referred to as the Hidden Markov Model.</dd>
 
  <dt>Continuous-time Hidden Markov Model</dt> 
- <dd>The variant of the Hidden Markov Model, where the state transition can occure in the continuous time, and that allows random distribution  of the observation times. </dd>
+ <dd>The variant of the Hidden Markov Model where the state transition as well as observations occurs in the continuous time. </dd>
 </dl>
 
-Before starting to work, it is recommended to go trough **tutorial with examples**, [the ipython notebook](https://github.com/lopatovsky/CT-HMM/blob/master/hmms.ipynb), covering most of the main usecases.
+Before starting work, you may check out **the tutorial with examples**. [the ipython notebook](https://github.com/lopatovsky/CT-HMM/blob/master/hmms.ipynb), covering most of the common use-cases.
 
-For **deeper understanding** of the topic you can see the corresponding [diploma thesis](https://github.com/lopatovsky/DP).
-Or read the main referenced articles: [Dt-HMM](http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf), [Ct-HMM](https://web.engr.oregonstate.edu/~lif/nips2015_CTHMM_learning_camera_ready.pdf) .
+For **the deeper understanding** of the topic refer to the corresponding [diploma thesis](https://github.com/lopatovsky/DP).
+Or read some of the main referenced articles: [Dt-HMM](http://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf), [Ct-HMM](https://web.engr.oregonstate.edu/~lif/nips2015_CTHMM_learning_camera_ready.pdf) .
 
 -  Sources of the project:
    [Pypi](https://pypi.python.org/pypi/hmms),
@@ -36,7 +39,7 @@ Requirements
 Download & Install
 -------------------
 
-After installing Numpy and Cython, you can install the package directly from test pypi.
+The Numpy and Cython must be installed before installing the library package from pypi.
 
 ```
 (env)$ python -m pip install numpy cython
