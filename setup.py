@@ -10,8 +10,8 @@ with open('README') as f:
 
 setup(
     name='hmms',
-    version='0.1',
-    description='Discrete-time and continuous-time hidden Markov model library able to handle hundreds of hidden states',
+    version='0.2',
+    description='Efficient discrete and continuous-time hidden Markov model library able to handle hundreds of hidden states',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
     license='Public Domain',
@@ -19,7 +19,7 @@ setup(
     url='https://github.com/lopatovsky/CT-HMM',
     packages=find_packages(),
     zip_safe=False,
-    ext_modules=cythonize(glob.glob('hmms/*.pyx'), language_level=3, include_path=[numpy.get_include()]),
+    ext_modules=cythonize(glob.glob('hmms/*.pyx'), language_level=3),
     include_dirs=[numpy.get_include()],
     install_requires=[
         'Cython',
