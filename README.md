@@ -2,7 +2,7 @@ Intro
 =======
 
 HMMs is the **Hidden Markov Models library** for *Python*. 
-It is easy to use, **general purpose** library, implementing all the important
+It is easy to use **general purpose** library implementing all the important
 submethods needed for the training, examining and experimenting with
 the data models.
 
