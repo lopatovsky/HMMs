@@ -7,11 +7,12 @@ import numpy
 with open('README.md', 'r') as f:
     long_description = f.read()
 
-
 setup(
     name='hmms',
-    version='0.2.2',
+    version='0.2.3',
     description='Efficient discrete and continuous-time hidden Markov model library able to handle hundreds of hidden states',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
     license='Public Domain',
