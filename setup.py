@@ -10,7 +10,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='hmms',
-    version='0.2.1',
+    version='0.2.2',
     description='Efficient discrete and continuous-time hidden Markov model library able to handle hundreds of hidden states',
     author='Lukas Lopatovsky',
     author_email='lopatovsky@gmail.com',
