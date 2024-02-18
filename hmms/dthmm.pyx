@@ -17,7 +17,7 @@ cimport cython
 #cython: nonecheck=False
 
 ctypedef numpy.float64_t float_t
-ctypedef numpy.int_t int_t
+ctypedef int_t int_t
 
 cdef class DtHMM:
 
