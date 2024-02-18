@@ -17,7 +17,7 @@ cimport cython
 #cython: nonecheck=False
 
 ctypedef numpy.float64_t float_t
-ctypedef numpy.int_t int_t
+ctypedef int_t int_t
 
 cdef class DtHMM:
 
@@ -259,7 +259,7 @@ cdef class DtHMM:
         size = e_seq.shape[0]
         states_num = self._loga.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
-        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=int ) #numpy.zeros( (size, states_num ))
 
         delta[0,:] = logpi + logb[:, int(e_seq[0]) ]
         psi[0,:] = 0
@@ -285,7 +285,7 @@ cdef class DtHMM:
                 max_p = delta[-1,s]
                 p = s
 
-        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=numpy.int )
+        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=int )
 
         for i in range(size-1,-1,-1):
             path[i] = p
@@ -376,11 +376,11 @@ cdef class DtHMM:
         if isinstance(s_seqs, list): seq_num = len(s_seqs)  #list of numpy vectors
         else: seq_num = s_seqs.shape[0]
 
-        sum_0 =    numpy.zeros  ( s_num , dtype=numpy.int64)
-        sum_last = numpy.zeros  ( s_num , dtype=numpy.int64)
-        sum_all =  numpy.zeros  ( s_num , dtype=numpy.int64)
-        sum_move = numpy.zeros( (s_num,s_num ) , dtype=numpy.int64)
-        sum_emit = numpy.zeros( (s_num,o_num ) , dtype=numpy.int64)
+        sum_0 =    numpy.zeros  ( s_num , dtype=int64)
+        sum_last = numpy.zeros  ( s_num , dtype=int64)
+        sum_all =  numpy.zeros  ( s_num , dtype=int64)
+        sum_move = numpy.zeros( (s_num,s_num ) , dtype=int64)
+        sum_emit = numpy.zeros( (s_num,o_num ) , dtype=int64)
 
         for ss,es in zip( s_seqs, e_seqs):
 
