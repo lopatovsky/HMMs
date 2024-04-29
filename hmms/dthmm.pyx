@@ -17,7 +17,7 @@ cimport cython
 #cython: nonecheck=False
 
 ctypedef numpy.float64_t float_t
-ctypedef numpy.int_t int_t
+ctypedef numpy.int64_t int_t
 
 cdef class DtHMM:
 
@@ -259,9 +259,9 @@ cdef class DtHMM:
         size = e_seq.shape[0]
         states_num = self._loga.shape[0]
         cdef numpy.ndarray[float_t, ndim=2] delta = numpy.empty( (size,states_num), dtype=numpy.float64 ) #numpy.zeros( (size, states_num ))
-        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=int ) #numpy.zeros( (size, states_num ))
+        cdef numpy.ndarray[int_t, ndim=2] psi = numpy.empty( (size,states_num), dtype=numpy.int64 ) #numpy.zeros( (size, states_num ))
 
-        delta[0,:] = logpi + logb[:, int(e_seq[0]) ]
+        delta[0,:] = logpi + logb[:, numpy.int64(e_seq[0]) ]
         psi[0,:] = 0
         for i in range(1,size):
             for s in range(states_num):
@@ -285,7 +285,7 @@ cdef class DtHMM:
                 max_p = delta[-1,s]
                 p = s
 
-        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=int )
+        cdef numpy.ndarray[int_t, ndim=1] path = numpy.full( size, 0, dtype=numpy.int64 )
 
         for i in range(size-1,-1,-1):
             path[i] = p
