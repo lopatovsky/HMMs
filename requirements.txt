@@ -4,6 +4,6 @@ matplotlib==2.0.0
 numpy==1.22.0
 notebook==6.4.12
 pandas==0.19.2
-pytest==3.0.6
+pytest==9.0.3
 scipy==1.11.1
 
